@@ -116,7 +116,7 @@
 
   </main>
 
-  <!-- MODAL: ARTIKEL DETAILS POPUP -->
+  <!-- MODAL: ARTIKEL DETAILS POPUP MET VOLLEDIGE PORTRETWEERGAVE -->
   <div id="item-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="card-bg max-w-md w-full rounded-2xl p-6 border border-gray-700 space-y-4 shadow-2xl relative" onclick="event.stopPropagation()">
       <button type="button" onclick="closeItemModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white text-lg p-2">
@@ -168,8 +168,10 @@
 
     const connDot = document.getElementById("conn-dot");
     const connText = document.getElementById("conn-text");
+
     let activeProjectScan = { projectId: null, mode: null };
 
+    // Realtime data ophalen via REST
     async function loadCloudData() {
       try {
         const response = await fetch(`${DB_BASE}/.json?_t=${Date.now()}`);
@@ -212,11 +214,10 @@
       }
     }
 
-    // Direct starten en live synchroniseren
     loadCloudData();
     setInterval(loadCloudData, 2500);
 
-    // Render Voorraadlijst
+    // 1. Render Voorraadlijst
     function renderGear() {
       const q = (document.getElementById("gear-search").value || "").toLowerCase();
       const tbody = document.getElementById("gear-table-body");
@@ -253,7 +254,7 @@
       `).join("");
     }
 
-    // Render Kratten & Locaties
+    // 2. Render Kratten & Locaties
     function renderLocations() {
       const grid = document.getElementById("locations-grid");
       if (!grid) return;
@@ -300,7 +301,7 @@
       }).join("");
     }
 
-    // Render Projecten
+    // 3. Render Projecten
     function renderProjects() {
       const container = document.getElementById("projects-list");
       if (!container) return;
@@ -347,263 +348,9 @@
               <div class="bg-gray-900/90 border border-cyan-500/40 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-2 text-sm text-cyan-300 font-semibold">
                   <i class="fa-solid fa-barcode"></i>
-                  <span>Scan nu artikelen voor ${currentMode === 'LOAD_IN' ? 'LOAD-IN' : 'LOAD-OUT'}:</span>
+                  <span>Voer barcode / QR in voor ${currentMode === 'LOAD_IN' ? 'LOAD-IN' : 'LOAD-OUT'}:</span>
                 </div>
                 <div class="flex items-center gap-2">
                   <input type="text" id="manual-scan-input" placeholder="Typ code & Enter..." 
-                         class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono w-48">
-                  <button type="button" onclick="submitManualScan(${p.id})" class="px-3 py-1.5 btn-cyan text-xs rounded-lg">Scan</button>
-                </div>
-              </div>
-            ` : ''}
-
-            <div>
-              ${missing.length > 0 
-                ? `<div class="px-4 py-2 bg-red-950/60 border border-red-700/60 text-red-300 rounded-xl text-xs font-bold flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i>Let op: nog ${missing.length} apparaat/apparaten niet ingepakt in de kratten!</div>`
-                : `<div class="px-4 py-2 bg-emerald-950/60 border border-emerald-700/60 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2"><i class="fa-solid fa-check"></i>Alles compleet ingepakt in de kratten.</div>`}
-            </div>
-
-            <div class="overflow-x-auto rounded-xl border border-gray-800">
-              <table class="w-full text-left text-xs text-gray-300">
-                <thead class="bg-gray-900 border-b border-gray-800 text-gray-400 uppercase">
-                  <tr>
-                    <th class="p-3">Apparaat</th>
-                    <th class="p-3">Krat</th>
-                    <th class="p-3 text-center">Nodig</th>
-                    <th class="p-3 text-center">Load-In</th>
-                    <th class="p-3 text-center">Load-Out</th>
-                    <th class="p-3 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-800/40">
-                  ${items.map(it => {
-                    const inC = parseInt(it.loadedInCount) || 0;
-                    const outC = parseInt(it.loadedOutCount) || 0;
-                    const req = parseInt(it.requiredCount) || 1;
-                    const isDone = (inC >= req) && (outC >= inC);
-                    return `
-                    <tr class="hover:bg-gray-800/30">
-                      <td class="p-3 font-semibold text-white cursor-pointer hover:text-cyan-400 transition" data-qr="${encodeURIComponent(it.gearQr || '')}" onclick="handleItemClick(this)">
-                        ${it.gearName || it.gearQr}
-                      </td>
-                      <td class="p-3 text-pink-400 font-semibold">📦 ${it.defaultLocation || "-"}</td>
-                      <td class="p-3 text-center font-bold text-gray-300">${req}</td>
-                      <td class="p-3 text-center text-cyan-400 font-bold">${inC}/${req}</td>
-                      <td class="p-3 text-center text-pink-400 font-bold">${outC}/${inC}</td>
-                      <td class="p-3 text-center">
-                        ${isDone 
-                          ? `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800">Compleet</span>`
-                          : `<span class="px-2 py-0.5 rounded text-[10px] bg-amber-950 text-amber-400 border border-amber-800">Bezig</span>`}
-                      </td>
-                    </tr>
-                  `}).join("")}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        `;
-      }).join("");
-    }
-
-    // Doorklik handler
-    function handleItemClick(el) {
-      if (!el) return;
-      const rawQr = el.getAttribute("data-qr");
-      if (rawQr) {
-        openItemModal(decodeURIComponent(rawQr));
-      }
-    }
-
-    // Modal Details weergave
-    function openItemModal(qrCode) {
-      if (!qrCode) return;
-      const item = allGear.find(g => (g.qrCode || "").trim().toLowerCase() === qrCode.trim().toLowerCase());
-      if (!item) {
-        console.warn("Artikel niet gevonden:", qrCode);
-        return;
-      }
-
-      document.getElementById("modal-name").textContent = item.name || "Onbekend artikel";
-      document.getElementById("modal-qr").textContent = item.qrCode || "-";
-      document.getElementById("modal-cat").textContent = item.category || "-";
-      document.getElementById("modal-qty").textContent = (item.quantity || 1) + " stuk(s)";
-      document.getElementById("modal-loc").textContent = "📦 " + (item.defaultLocation || "Niet ingedeeld");
-      document.getElementById("modal-desc").textContent = item.description || "Geen extra opmerkingen.";
-
-      const imgCont = document.getElementById("modal-img-container");
-      const img = document.getElementById("modal-img");
-      if (item.photoUri && (item.photoUri.startsWith("data:image") || item.photoUri.startsWith("http"))) {
-        img.src = item.photoUri;
-        imgCont.classList.remove("hidden");
-      } else {
-        img.src = "";
-        imgCont.classList.add("hidden");
-      }
-
-      const modal = document.getElementById("item-modal");
-      if (modal) modal.classList.remove("hidden");
-    }
-
-    function closeItemModal() {
-      const modal = document.getElementById("item-modal");
-      if (modal) modal.classList.add("hidden");
-    }
-
-    window.addEventListener("click", e => {
-      const modal = document.getElementById("item-modal");
-      if (e.target === modal) {
-        closeItemModal();
-      }
-    });
-
-    // Load-In / Load-Out Acties via directe REST API
-    function setProjectScanMode(projectId, mode) {
-      if (activeProjectScan.projectId === projectId && activeProjectScan.mode === mode) {
-        stopProjectScan();
-      } else {
-        activeProjectScan = { projectId, mode };
-        renderProjects();
-        setTimeout(() => {
-          const input = document.getElementById("manual-scan-input");
-          if (input) input.focus();
-        }, 100);
-      }
-    }
-
-    function stopProjectScan() {
-      activeProjectScan = { projectId: null, mode: null };
-      renderProjects();
-    }
-
-    async function submitManualScan(projectId) {
-      const input = document.getElementById("manual-scan-input");
-      if (!input) return;
-      const code = input.value.trim();
-      if (!code) return;
-      await processProjectBarcodeScan(projectId, activeProjectScan.mode, code);
-      input.value = "";
-    }
-
-    async function processProjectBarcodeScan(projectId, mode, code) {
-      const proj = allProjects.find(p => p.id == projectId);
-      if (!proj) return;
-
-      const items = proj.items ? (Array.isArray(proj.items) ? [...proj.items] : Object.values(proj.items)) : [];
-      let entryIndex = items.findIndex(i => (i.gearQr || "").trim().toLowerCase() === code.trim().toLowerCase());
-      const gearInfo = allGear.find(g => (g.qrCode || "").trim().toLowerCase() === code.trim().toLowerCase());
-
-      if (mode === "LOAD_IN") {
-        if (entryIndex !== -1) {
-          const entry = items[entryIndex];
-          const curIn = parseInt(entry.loadedInCount) || 0;
-          const req = parseInt(entry.requiredCount) || 1;
-          const maxStock = gearInfo ? parseInt(gearInfo.quantity) : 99;
-
-          if (curIn < req) {
-            entry.loadedInCount = curIn + 1;
-            alert(`✅ Ingeladen: ${entry.gearName || code} (${entry.loadedInCount}/${req})`);
-          } else if (curIn < maxStock) {
-            entry.requiredCount = req + 1;
-            entry.loadedInCount = curIn + 1;
-            alert(`➕ Extra exemplaar ingeladen: ${entry.gearName || code}`);
-          } else {
-            alert(`⚠️ Alle ${maxStock} stuks uit voorraad zijn al ingeladen!`);
-            return;
-          }
-        } else {
-          if (!gearInfo) {
-            alert("❌ Barcode niet gevonden in voorraad!");
-            return;
-          }
-          items.push({
-            gearQr: gearInfo.qrCode,
-            gearName: gearInfo.name,
-            defaultLocation: gearInfo.defaultLocation,
-            category: gearInfo.category,
-            photoUri: gearInfo.photoUri || null,
-            requiredCount: 1,
-            loadedInCount: 1,
-            loadedOutCount: 0
-          });
-          alert(`➕ Vrij toegevoegd aan project: ${gearInfo.name}`);
-        }
-      } else if (mode === "LOAD_OUT") {
-        if (entryIndex === -1) {
-          alert("❌ Dit artikel hoort niet bij dit evenement!");
-          return;
-        }
-        const entry = items[entryIndex];
-        const inC = parseInt(entry.loadedInCount) || 0;
-        const outC = parseInt(entry.loadedOutCount) || 0;
-
-        if (inC === 0) {
-          alert("⚠️ Dit artikel was niet ingeladen bij de opbouw!");
-          return;
-        } else if (outC >= inC) {
-          alert("⚠️ Alle ingeladen stuks liggen al in het krat!");
-          return;
-        } else {
-          entry.loadedOutCount = outC + 1;
-          alert(`✅ Inpakken in: ${entry.defaultLocation || "krat"} (${entry.loadedOutCount}/${inC})`);
-        }
-      }
-
-      proj.items = items;
-      try {
-        await fetch(`${DB_BASE}/projects/${projectId}.json`, {
-          method: "PUT",
-          body: JSON.stringify(proj)
-        });
-        loadCloudData();
-      } catch (e) {
-        console.error("Fout bij opslaan:", e);
-      }
-    }
-
-    // Tabwisselaar
-    function switchTab(tab) {
-      ['inventory', 'locations', 'projects'].forEach(t => {
-        const sec = document.getElementById(`sec-${t}`);
-        if (sec) sec.classList.toggle('hidden', t !== tab);
-        const btn = document.getElementById(`tab-${t}`);
-        if (btn) {
-          if (t === tab) {
-            btn.className = "tab-btn px-5 py-2.5 font-bold text-sm border-b-2 border-cyan-400 text-cyan-400 flex items-center gap-2";
-          } else {
-            btn.className = "tab-btn px-5 py-2.5 font-bold text-sm border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-2";
-          }
-        }
-      });
-    }
-
-    // Handscanner keyboard listener
-    let scanBuffer = "";
-    let lastKeyTime = Date.now();
-
-    window.addEventListener("keydown", e => {
-      if (e.key === "Escape") closeItemModal();
-
-      const now = Date.now();
-      if (now - lastKeyTime > 120) scanBuffer = "";
-      lastKeyTime = now;
-
-      if (e.key === "Enter") {
-        const code = scanBuffer.trim();
-        if (code.length > 0) {
-          if (activeProjectScan.projectId && activeProjectScan.mode) {
-            processProjectBarcodeScan(activeProjectScan.projectId, activeProjectScan.mode, code);
-          } else {
-            switchTab('inventory');
-            const searchInput = document.getElementById("gear-search");
-            if (searchInput) searchInput.value = code;
-            renderGear();
-          }
-        }
-        scanBuffer = "";
-      } else if (e.key.length === 1) {
-        scanBuffer += e.key;
-      }
-    });
-  </script>
-</body>
-</html>
+                         onkeydown="if(event.key === 'Enter') submitManualScan(${p.id})"
+                         class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-
