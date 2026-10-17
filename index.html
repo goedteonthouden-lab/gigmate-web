@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gigmate Web • Gear & Event Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Firebase Compat Libraries -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { background-color: #070B12; color: #E2E8F0; font-family: system-ui, -apple-system, sans-serif; }
@@ -119,7 +116,7 @@
 
   </main>
 
-  <!-- MODAL: ARTIKEL DETAILS POPUP MET VOLLEDIGE PORTRETWEERGAVE -->
+  <!-- MODAL: ARTIKEL DETAILS POPUP -->
   <div id="item-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="card-bg max-w-md w-full rounded-2xl p-6 border border-gray-700 space-y-4 shadow-2xl relative" onclick="event.stopPropagation()">
       <button type="button" onclick="closeItemModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white text-lg p-2">
@@ -165,19 +162,7 @@
   </div>
 
   <script>
-    // Exacte configuratie van jouw Firebase project
-    const firebaseConfig = {
-      apiKey: "AIzaSyBXTBXgrnpU2C1fXDyhwPQiZkKySIbN0WM",
-      projectId: "gigmate-5bcd7",
-      databaseURL: "https://gigmate-5bcd7-default-rtdb.europe-west1.firebasedatabase.app"
-    };
-
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-    // Expliciet de database-URL meegeven voor de europe-west1 regio
-    const db = firebase.app().database("https://gigmate-5bcd7-default-rtdb.europe-west1.firebasedatabase.app");
-
+    const DB_BASE = "https://gigmate-5bcd7-default-rtdb.europe-west1.firebasedatabase.app";
     let allGear = [];
     let allProjects = [];
 
@@ -185,50 +170,53 @@
     const connText = document.getElementById("conn-text");
     let activeProjectScan = { projectId: null, mode: null };
 
-    // 1. Realtime verbindingsstatus
-    db.ref(".info/connected").on("value", snap => {
-      if (snap.val() === true) {
-        connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500";
-        connText.textContent = "Cloud: Online";
-        connText.className = "text-emerald-400 font-medium";
-      } else {
-        connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-amber-400";
-        connText.textContent = "Cloud: Verbinden...";
-        connText.className = "text-gray-300 font-medium";
-      }
-    });
+    async function loadCloudData() {
+      try {
+        const response = await fetch(`${DB_BASE}/.json?_t=${Date.now()}`);
+        if (!response.ok) throw new Error("HTTP-status " + response.status);
+        const data = await response.json();
 
-    // 2. Realtime listener: gear_items
-    db.ref("gear_items").on("value", snapshot => {
-      const val = snapshot.val();
-      allGear = [];
-      if (val) {
-        allGear = Array.isArray(val) ? val.filter(Boolean) : Object.values(val);
-      }
-      document.getElementById("count-gear").textContent = allGear.length;
-      renderGear();
-      renderLocations();
-    }, err => {
-      console.error("Fout bij ophalen gear_items:", err);
-      connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-red-500";
-      connText.textContent = "Cloud: Fout (check regels)";
-      connText.className = "text-red-400 font-medium";
-    });
+        if (connDot && connText) {
+          connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500";
+          connText.textContent = "Cloud: Online";
+          connText.className = "text-emerald-400 font-medium";
+        }
 
-    // 3. Realtime listener: projects
-    db.ref("projects").on("value", snapshot => {
-      const val = snapshot.val();
-      allProjects = [];
-      if (val) {
-        allProjects = Array.isArray(val) ? val.filter(Boolean) : Object.values(val);
-      }
-      document.getElementById("count-projects").textContent = allProjects.length;
-      renderProjects();
-    }, err => {
-      console.error("Fout bij ophalen projects:", err);
-    });
+        // 1. Gear uitpakken
+        const rawGear = data ? data.gear_items : null;
+        allGear = [];
+        if (rawGear) {
+          allGear = Array.isArray(rawGear) ? rawGear.filter(Boolean) : Object.values(rawGear);
+        }
+        const countGearEl = document.getElementById("count-gear");
+        if (countGearEl) countGearEl.textContent = allGear.length;
+        renderGear();
+        renderLocations();
 
-    // 4. Render Voorraadlijst
+        // 2. Projecten uitpakken
+        const rawProj = data ? data.projects : null;
+        allProjects = [];
+        if (rawProj) {
+          allProjects = Array.isArray(rawProj) ? rawProj.filter(Boolean) : Object.values(rawProj);
+        }
+        const countProjEl = document.getElementById("count-projects");
+        if (countProjEl) countProjEl.textContent = allProjects.length;
+        renderProjects();
+      } catch (err) {
+        console.warn("Cloud laadfout:", err);
+        if (connDot && connText) {
+          connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-amber-400";
+          connText.textContent = "Cloud: Verbinden...";
+          connText.className = "text-gray-300 font-medium";
+        }
+      }
+    }
+
+    // Direct starten en live synchroniseren
+    loadCloudData();
+    setInterval(loadCloudData, 2500);
+
+    // Render Voorraadlijst
     function renderGear() {
       const q = (document.getElementById("gear-search").value || "").toLowerCase();
       const tbody = document.getElementById("gear-table-body");
@@ -265,7 +253,7 @@
       `).join("");
     }
 
-    // 5. Render Kratten & Locaties
+    // Render Kratten & Locaties
     function renderLocations() {
       const grid = document.getElementById("locations-grid");
       if (!grid) return;
@@ -312,7 +300,7 @@
       }).join("");
     }
 
-    // 6. Render Projecten
+    // Render Projecten
     function renderProjects() {
       const container = document.getElementById("projects-list");
       if (!container) return;
@@ -387,4 +375,235 @@
                     <th class="p-3 text-center">Status</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y
+                <tbody class="divide-y divide-gray-800/40">
+                  ${items.map(it => {
+                    const inC = parseInt(it.loadedInCount) || 0;
+                    const outC = parseInt(it.loadedOutCount) || 0;
+                    const req = parseInt(it.requiredCount) || 1;
+                    const isDone = (inC >= req) && (outC >= inC);
+                    return `
+                    <tr class="hover:bg-gray-800/30">
+                      <td class="p-3 font-semibold text-white cursor-pointer hover:text-cyan-400 transition" data-qr="${encodeURIComponent(it.gearQr || '')}" onclick="handleItemClick(this)">
+                        ${it.gearName || it.gearQr}
+                      </td>
+                      <td class="p-3 text-pink-400 font-semibold">📦 ${it.defaultLocation || "-"}</td>
+                      <td class="p-3 text-center font-bold text-gray-300">${req}</td>
+                      <td class="p-3 text-center text-cyan-400 font-bold">${inC}/${req}</td>
+                      <td class="p-3 text-center text-pink-400 font-bold">${outC}/${inC}</td>
+                      <td class="p-3 text-center">
+                        ${isDone 
+                          ? `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800">Compleet</span>`
+                          : `<span class="px-2 py-0.5 rounded text-[10px] bg-amber-950 text-amber-400 border border-amber-800">Bezig</span>`}
+                      </td>
+                    </tr>
+                  `}).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // Doorklik handler
+    function handleItemClick(el) {
+      if (!el) return;
+      const rawQr = el.getAttribute("data-qr");
+      if (rawQr) {
+        openItemModal(decodeURIComponent(rawQr));
+      }
+    }
+
+    // Modal Details weergave
+    function openItemModal(qrCode) {
+      if (!qrCode) return;
+      const item = allGear.find(g => (g.qrCode || "").trim().toLowerCase() === qrCode.trim().toLowerCase());
+      if (!item) {
+        console.warn("Artikel niet gevonden:", qrCode);
+        return;
+      }
+
+      document.getElementById("modal-name").textContent = item.name || "Onbekend artikel";
+      document.getElementById("modal-qr").textContent = item.qrCode || "-";
+      document.getElementById("modal-cat").textContent = item.category || "-";
+      document.getElementById("modal-qty").textContent = (item.quantity || 1) + " stuk(s)";
+      document.getElementById("modal-loc").textContent = "📦 " + (item.defaultLocation || "Niet ingedeeld");
+      document.getElementById("modal-desc").textContent = item.description || "Geen extra opmerkingen.";
+
+      const imgCont = document.getElementById("modal-img-container");
+      const img = document.getElementById("modal-img");
+      if (item.photoUri && (item.photoUri.startsWith("data:image") || item.photoUri.startsWith("http"))) {
+        img.src = item.photoUri;
+        imgCont.classList.remove("hidden");
+      } else {
+        img.src = "";
+        imgCont.classList.add("hidden");
+      }
+
+      const modal = document.getElementById("item-modal");
+      if (modal) modal.classList.remove("hidden");
+    }
+
+    function closeItemModal() {
+      const modal = document.getElementById("item-modal");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    window.addEventListener("click", e => {
+      const modal = document.getElementById("item-modal");
+      if (e.target === modal) {
+        closeItemModal();
+      }
+    });
+
+    // Load-In / Load-Out Acties via directe REST API
+    function setProjectScanMode(projectId, mode) {
+      if (activeProjectScan.projectId === projectId && activeProjectScan.mode === mode) {
+        stopProjectScan();
+      } else {
+        activeProjectScan = { projectId, mode };
+        renderProjects();
+        setTimeout(() => {
+          const input = document.getElementById("manual-scan-input");
+          if (input) input.focus();
+        }, 100);
+      }
+    }
+
+    function stopProjectScan() {
+      activeProjectScan = { projectId: null, mode: null };
+      renderProjects();
+    }
+
+    async function submitManualScan(projectId) {
+      const input = document.getElementById("manual-scan-input");
+      if (!input) return;
+      const code = input.value.trim();
+      if (!code) return;
+      await processProjectBarcodeScan(projectId, activeProjectScan.mode, code);
+      input.value = "";
+    }
+
+    async function processProjectBarcodeScan(projectId, mode, code) {
+      const proj = allProjects.find(p => p.id == projectId);
+      if (!proj) return;
+
+      const items = proj.items ? (Array.isArray(proj.items) ? [...proj.items] : Object.values(proj.items)) : [];
+      let entryIndex = items.findIndex(i => (i.gearQr || "").trim().toLowerCase() === code.trim().toLowerCase());
+      const gearInfo = allGear.find(g => (g.qrCode || "").trim().toLowerCase() === code.trim().toLowerCase());
+
+      if (mode === "LOAD_IN") {
+        if (entryIndex !== -1) {
+          const entry = items[entryIndex];
+          const curIn = parseInt(entry.loadedInCount) || 0;
+          const req = parseInt(entry.requiredCount) || 1;
+          const maxStock = gearInfo ? parseInt(gearInfo.quantity) : 99;
+
+          if (curIn < req) {
+            entry.loadedInCount = curIn + 1;
+            alert(`✅ Ingeladen: ${entry.gearName || code} (${entry.loadedInCount}/${req})`);
+          } else if (curIn < maxStock) {
+            entry.requiredCount = req + 1;
+            entry.loadedInCount = curIn + 1;
+            alert(`➕ Extra exemplaar ingeladen: ${entry.gearName || code}`);
+          } else {
+            alert(`⚠️ Alle ${maxStock} stuks uit voorraad zijn al ingeladen!`);
+            return;
+          }
+        } else {
+          if (!gearInfo) {
+            alert("❌ Barcode niet gevonden in voorraad!");
+            return;
+          }
+          items.push({
+            gearQr: gearInfo.qrCode,
+            gearName: gearInfo.name,
+            defaultLocation: gearInfo.defaultLocation,
+            category: gearInfo.category,
+            photoUri: gearInfo.photoUri || null,
+            requiredCount: 1,
+            loadedInCount: 1,
+            loadedOutCount: 0
+          });
+          alert(`➕ Vrij toegevoegd aan project: ${gearInfo.name}`);
+        }
+      } else if (mode === "LOAD_OUT") {
+        if (entryIndex === -1) {
+          alert("❌ Dit artikel hoort niet bij dit evenement!");
+          return;
+        }
+        const entry = items[entryIndex];
+        const inC = parseInt(entry.loadedInCount) || 0;
+        const outC = parseInt(entry.loadedOutCount) || 0;
+
+        if (inC === 0) {
+          alert("⚠️ Dit artikel was niet ingeladen bij de opbouw!");
+          return;
+        } else if (outC >= inC) {
+          alert("⚠️ Alle ingeladen stuks liggen al in het krat!");
+          return;
+        } else {
+          entry.loadedOutCount = outC + 1;
+          alert(`✅ Inpakken in: ${entry.defaultLocation || "krat"} (${entry.loadedOutCount}/${inC})`);
+        }
+      }
+
+      proj.items = items;
+      try {
+        await fetch(`${DB_BASE}/projects/${projectId}.json`, {
+          method: "PUT",
+          body: JSON.stringify(proj)
+        });
+        loadCloudData();
+      } catch (e) {
+        console.error("Fout bij opslaan:", e);
+      }
+    }
+
+    // Tabwisselaar
+    function switchTab(tab) {
+      ['inventory', 'locations', 'projects'].forEach(t => {
+        const sec = document.getElementById(`sec-${t}`);
+        if (sec) sec.classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById(`tab-${t}`);
+        if (btn) {
+          if (t === tab) {
+            btn.className = "tab-btn px-5 py-2.5 font-bold text-sm border-b-2 border-cyan-400 text-cyan-400 flex items-center gap-2";
+          } else {
+            btn.className = "tab-btn px-5 py-2.5 font-bold text-sm border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-2";
+          }
+        }
+      });
+    }
+
+    // Handscanner keyboard listener
+    let scanBuffer = "";
+    let lastKeyTime = Date.now();
+
+    window.addEventListener("keydown", e => {
+      if (e.key === "Escape") closeItemModal();
+
+      const now = Date.now();
+      if (now - lastKeyTime > 120) scanBuffer = "";
+      lastKeyTime = now;
+
+      if (e.key === "Enter") {
+        const code = scanBuffer.trim();
+        if (code.length > 0) {
+          if (activeProjectScan.projectId && activeProjectScan.mode) {
+            processProjectBarcodeScan(activeProjectScan.projectId, activeProjectScan.mode, code);
+          } else {
+            switchTab('inventory');
+            const searchInput = document.getElementById("gear-search");
+            if (searchInput) searchInput.value = code;
+            renderGear();
+          }
+        }
+        scanBuffer = "";
+      } else if (e.key.length === 1) {
+        scanBuffer += e.key;
+      }
+    });
+  </script>
+</body>
+</html>
