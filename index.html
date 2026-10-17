@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gigmate Web • Gear & Event Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Officiële Firebase SDK's -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { background-color: #070B12; color: #E2E8F0; font-family: system-ui, -apple-system, sans-serif; }
@@ -48,6 +51,12 @@
       </div>
     </div>
   </header>
+
+  <!-- Foutmelding banner (verschijnt alleen bij storing) -->
+  <div id="error-banner" class="hidden bg-red-950/90 border-b border-red-700 text-red-200 px-6 py-2 text-xs flex justify-between items-center">
+    <span id="error-message">Verbindingsfout</span>
+    <button onclick="manualRefresh()" class="px-3 py-1 bg-red-800 hover:bg-red-700 rounded text-white font-bold">Opnieuw proberen</button>
+  </div>
 
   <!-- Navigatietabs -->
   <nav class="bg-[#090F1C] border-b border-gray-800 px-6 flex gap-3 pt-3">
@@ -162,62 +171,85 @@
   </div>
 
   <script>
-    const DB_BASE = "https://gigmate-5bcd7-default-rtdb.europe-west1.firebasedatabase.app";
+    const DB_URL = "https://gigmate-5bcd7-default-rtdb.europe-west1.firebasedatabase.app";
+    const firebaseConfig = {
+      apiKey: "AIzaSyBXTBXgrnpU2C1fXDyhwPQiZkKySIbN0WM",
+      projectId: "gigmate-5bcd7",
+      databaseURL: DB_URL
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.app().database(DB_URL);
+
     let allGear = [];
     let allProjects = [];
 
     const connDot = document.getElementById("conn-dot");
     const connText = document.getElementById("conn-text");
+    const errBanner = document.getElementById("error-banner");
+    const errMsg = document.getElementById("error-message");
 
     let activeProjectScan = { projectId: null, mode: null };
 
-    // Realtime data ophalen via REST
-    async function loadCloudData() {
-      try {
-        const response = await fetch(`${DB_BASE}/.json?_t=${Date.now()}`);
-        if (!response.ok) throw new Error("HTTP-status " + response.status);
-        const data = await response.json();
-
-        if (connDot && connText) {
-          connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500";
-          connText.textContent = "Cloud: Online";
-          connText.className = "text-emerald-400 font-medium";
-        }
-
-        // 1. Gear uitpakken
-        const rawGear = data ? data.gear_items : null;
-        allGear = [];
-        if (rawGear) {
-          allGear = Array.isArray(rawGear) ? rawGear.filter(Boolean) : Object.values(rawGear);
-        }
-        const countGearEl = document.getElementById("count-gear");
-        if (countGearEl) countGearEl.textContent = allGear.length;
-        renderGear();
-        renderLocations();
-
-        // 2. Projecten uitpakken
-        const rawProj = data ? data.projects : null;
-        allProjects = [];
-        if (rawProj) {
-          allProjects = Array.isArray(rawProj) ? rawProj.filter(Boolean) : Object.values(rawProj);
-        }
-        const countProjEl = document.getElementById("count-projects");
-        if (countProjEl) countProjEl.textContent = allProjects.length;
-        renderProjects();
-      } catch (err) {
-        console.warn("Cloud laadfout:", err);
-        if (connDot && connText) {
-          connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-amber-400";
-          connText.textContent = "Cloud: Verbinden...";
-          connText.className = "text-gray-300 font-medium";
-        }
+    // Verbindingsstatus indicator
+    db.ref(".info/connected").on("value", snap => {
+      if (snap.val() === true) {
+        connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500";
+        connText.textContent = "Cloud: Online";
+        connText.className = "text-emerald-400 font-medium";
+        errBanner.classList.add("hidden");
+      } else {
+        connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-amber-400";
+        connText.textContent = "Cloud: Verbinden...";
+        connText.className = "text-gray-300 font-medium";
       }
+    });
+
+    // 1. Live listener voor gear_items
+    db.ref("gear_items").on("value", snapshot => {
+      const val = snapshot.val();
+      allGear = [];
+      if (val) {
+        allGear = Array.isArray(val) ? val.filter(Boolean) : Object.values(val);
+      }
+      document.getElementById("count-gear").textContent = allGear.length;
+      renderGear();
+      renderLocations();
+      errBanner.classList.add("hidden");
+    }, err => {
+      console.error("Fout bij ophalen gear_items:", err);
+      showError("Toegang geweigerd of fout bij ophalen voorraad: " + err.message);
+    });
+
+    // 2. Live listener voor projects
+    db.ref("projects").on("value", snapshot => {
+      const val = snapshot.val();
+      allProjects = [];
+      if (val) {
+        allProjects = Array.isArray(val) ? val.filter(Boolean) : Object.values(val);
+      }
+      document.getElementById("count-projects").textContent = allProjects.length;
+      renderProjects();
+    }, err => {
+      console.error("Fout bij ophalen projects:", err);
+      showError("Fout bij ophalen projecten: " + err.message);
+    });
+
+    function showError(msg) {
+      connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-red-500";
+      connText.textContent = "Cloud: Fout";
+      connText.className = "text-red-400 font-medium";
+      errBanner.classList.remove("hidden");
+      errMsg.textContent = msg;
     }
 
-    loadCloudData();
-    setInterval(loadCloudData, 2500);
+    function manualRefresh() {
+      window.location.reload();
+    }
 
-    // 1. Render Voorraadlijst
+    // 3. Render Voorraadlijst
     function renderGear() {
       const q = (document.getElementById("gear-search").value || "").toLowerCase();
       const tbody = document.getElementById("gear-table-body");
@@ -254,7 +286,7 @@
       `).join("");
     }
 
-    // 2. Render Kratten & Locaties
+    // 4. Render Kratten & Locaties
     function renderLocations() {
       const grid = document.getElementById("locations-grid");
       if (!grid) return;
@@ -301,7 +333,7 @@
       }).join("");
     }
 
-    // 3. Render Projecten
+    // 5. Render Projecten
     function renderProjects() {
       const container = document.getElementById("projects-list");
       if (!container) return;
@@ -353,4 +385,266 @@
                 <div class="flex items-center gap-2">
                   <input type="text" id="manual-scan-input" placeholder="Typ code & Enter..." 
                          onkeydown="if(event.key === 'Enter') submitManualScan(${p.id})"
-                         class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-
+                         class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono w-52">
+                  <button type="button" onclick="submitManualScan(${p.id})" class="px-3.5 py-1.5 btn-cyan text-xs rounded-lg">Invoeren</button>
+                </div>
+              </div>
+            ` : ''}
+
+            <div>
+              ${missing.length > 0 
+                ? `<div class="px-4 py-2 bg-red-950/60 border border-red-700/60 text-red-300 rounded-xl text-xs font-bold flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i>Let op: nog ${missing.length} apparaat/apparaten niet ingepakt in de kratten!</div>`
+                : `<div class="px-4 py-2 bg-emerald-950/60 border border-emerald-700/60 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2"><i class="fa-solid fa-check"></i>Alles compleet ingepakt in de kratten.</div>`}
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-gray-800">
+              <table class="w-full text-left text-xs text-gray-300">
+                <thead class="bg-gray-900 border-b border-gray-800 text-gray-400 uppercase">
+                  <tr>
+                    <th class="p-3">Apparaat</th>
+                    <th class="p-3">Krat</th>
+                    <th class="p-3 text-center">Nodig</th>
+                    <th class="p-3 text-center">Load-In</th>
+                    <th class="p-3 text-center">Load-Out</th>
+                    <th class="p-3 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800/40">
+                  ${items.map(it => {
+                    const inC = parseInt(it.loadedInCount) || 0;
+                    const outC = parseInt(it.loadedOutCount) || 0;
+                    const req = parseInt(it.requiredCount) || 1;
+                    const isDone = (inC >= req) && (outC >= inC);
+                    return `
+                    <tr class="hover:bg-gray-800/30">
+                      <td class="p-3 font-semibold text-white cursor-pointer hover:text-cyan-400 transition" data-qr="${encodeURIComponent(it.gearQr || '')}" onclick="handleItemClick(this)">
+                        ${it.gearName || it.gearQr}
+                      </td>
+                      <td class="p-3 text-pink-400 font-semibold">📦 ${it.defaultLocation || "-"}</td>
+                      <td class="p-3 text-center font-bold text-gray-300">${req}</td>
+                      <td class="p-3 text-center text-cyan-400 font-bold">${inC}/${req}</td>
+                      <td class="p-3 text-center text-pink-400 font-bold">${outC}/${inC}</td>
+                      <td class="p-3 text-center">
+                        ${isDone 
+                          ? `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800">Compleet</span>`
+                          : `<span class="px-2 py-0.5 rounded text-[10px] bg-amber-950 text-amber-400 border border-amber-800">Bezig</span>`}
+                      </td>
+                    </tr>
+                  `}).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // 6. Doorklik handler
+    function handleItemClick(el) {
+      if (!el) return;
+      const rawQr = el.getAttribute("data-qr");
+      if (rawQr) {
+        openItemModal(decodeURIComponent(rawQr));
+      }
+    }
+
+    // 7. Modal Details weergave
+    function openItemModal(qrCode) {
+      if (!qrCode) return;
+      const item = allGear.find(g => (g.qrCode || "").trim().toLowerCase() === qrCode.trim().toLowerCase());
+      if (!item) {
+        console.warn("Artikel niet gevonden:", qrCode);
+        return;
+      }
+
+      document.getElementById("modal-name").textContent = item.name || "Onbekend artikel";
+      document.getElementById("modal-qr").textContent = item.qrCode || "-";
+      document.getElementById("modal-cat").textContent = item.category || "-";
+      document.getElementById("modal-qty").textContent = (item.quantity || 1) + " stuk(s)";
+      document.getElementById("modal-loc").textContent = "📦 " + (item.defaultLocation || "Niet ingedeeld");
+      document.getElementById("modal-desc").textContent = item.description || "Geen extra opmerkingen.";
+
+      const imgCont = document.getElementById("modal-img-container");
+      const img = document.getElementById("modal-img");
+      if (item.photoUri && (item.photoUri.startsWith("data:image") || item.photoUri.startsWith("http"))) {
+        img.src = item.photoUri;
+        imgCont.classList.remove("hidden");
+      } else {
+        img.src = "";
+        imgCont.classList.add("hidden");
+      }
+
+      const modal = document.getElementById("item-modal");
+      if (modal) modal.classList.remove("hidden");
+    }
+
+    function closeItemModal() {
+      const modal = document.getElementById("item-modal");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    window.addEventListener("click", e => {
+      const modal = document.getElementById("item-modal");
+      if (e.target === modal) {
+        closeItemModal();
+      }
+    });
+
+    // 8. Load-In / Load-Out Acties via officiële Firebase instantie
+    function setProjectScanMode(projectId, mode) {
+      if (activeProjectScan.projectId === projectId && activeProjectScan.mode === mode) {
+        stopProjectScan();
+      } else {
+        activeProjectScan = { projectId, mode };
+        renderProjects();
+        setTimeout(() => {
+          const input = document.getElementById("manual-scan-input");
+          if (input) input.focus();
+        }, 100);
+      }
+    }
+
+    function stopProjectScan() {
+      activeProjectScan = { projectId: null, mode: null };
+      renderProjects();
+    }
+
+    async function submitManualScan(projectId) {
+      const input = document.getElementById("manual-scan-input");
+      if (!input) return;
+      const code = input.value.trim();
+      if (!code) return;
+      
+      await processProjectBarcodeScan(projectId, activeProjectScan.mode, code);
+      input.value = "";
+      input.focus();
+    }
+
+    async function processProjectBarcodeScan(projectId, mode, code) {
+      const proj = allProjects.find(p => p.id == projectId);
+      if (!proj) {
+        alert("⚠️ Project niet gevonden!");
+        return;
+      }
+
+      const gearInfo = allGear.find(g => (g.qrCode || "").trim().toLowerCase() === code.trim().toLowerCase());
+      if (!gearInfo) {
+        alert(`❌ Barcode "${code}" bestaat niet in de voorraad!`);
+        return;
+      }
+
+      const items = proj.items ? (Array.isArray(proj.items) ? [...proj.items] : Object.values(proj.items)) : [];
+      let entryIndex = items.findIndex(i => (i.gearQr || "").trim().toLowerCase() === code.trim().toLowerCase());
+
+      if (mode === "LOAD_IN") {
+        if (entryIndex !== -1) {
+          const entry = items[entryIndex];
+          const curIn = parseInt(entry.loadedInCount) || 0;
+          const req = parseInt(entry.requiredCount) || 1;
+          const maxStock = parseInt(gearInfo.quantity) || 99;
+
+          if (curIn < req) {
+            entry.loadedInCount = curIn + 1;
+            alert(`✅ Ingeladen: ${entry.gearName || code} (${entry.loadedInCount}/${req})`);
+          } else if (curIn < maxStock) {
+            entry.requiredCount = req + 1;
+            entry.loadedInCount = curIn + 1;
+            alert(`➕ Extra exemplaar ingeladen: ${entry.gearName || code}`);
+          } else {
+            alert(`⚠️ Alle ${maxStock} stuks van dit artikel uit voorraad zijn al ingeladen!`);
+            return;
+          }
+        } else {
+          items.push({
+            gearQr: gearInfo.qrCode,
+            gearName: gearInfo.name,
+            defaultLocation: gearInfo.defaultLocation,
+            category: gearInfo.category,
+            photoUri: gearInfo.photoUri || null,
+            requiredCount: 1,
+            loadedInCount: 1,
+            loadedOutCount: 0
+          });
+          alert(`➕ Vrij toegevoegd aan project: ${gearInfo.name}`);
+        }
+      } else if (mode === "LOAD_OUT") {
+        if (entryIndex === -1) {
+          alert(`❌ Artikel "${gearInfo.name}" hoort niet bij dit evenement!`);
+          return;
+        }
+        const entry = items[entryIndex];
+        const inC = parseInt(entry.loadedInCount) || 0;
+        const outC = parseInt(entry.loadedOutCount) || 0;
+
+        if (inC === 0) {
+          alert(`⚠️ Artikel "${entry.gearName}" was niet ingeladen bij de opbouw!`);
+          return;
+        } else if (outC >= inC) {
+          alert(`⚠️ Alle ingeladen stuks van "${entry.gearName}" liggen al in het krat!`);
+          return;
+        } else {
+          entry.loadedOutCount = outC + 1;
+          alert(`✅ Inpakken in: ${entry.defaultLocation || "krat"} (${entry.loadedOutCount}/${inC})`);
+        }
+      }
+
+      proj.items = items;
+      try {
+        await db.ref(`projects/${projectId}`).set(proj);
+      } catch (e) {
+        console.error("Fout bij opslaan:", e);
+        alert("Fout bij opslaan naar de cloud: " + e.message);
+      }
+    }
+
+    // 9. Tabwisselaar
+    function switchTab(tab) {
+      ['inventory', 'locations', 'projects'].forEach(t => {
+        const sec = document.getElementById(`sec-${t}`);
+        if (sec) sec.classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById(`tab-${t}`);
+        if (btn) {
+          if (t === tab) {
+            btn.className = "tab-btn px-5 py-2.5 font-bold text-sm border-b-2 border-cyan-400 text-cyan-400 flex items-center gap-2";
+          } else {
+            btn.className = "tab-btn px-5 py-2.5 font-bold text-sm border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-2";
+          }
+        }
+      });
+    }
+
+    // 10. Handscanner keyboard listener
+    let scanBuffer = "";
+    let lastKeyTime = Date.now();
+
+    window.addEventListener("keydown", e => {
+      if (e.key === "Escape") closeItemModal();
+
+      if (document.activeElement && document.activeElement.id === "manual-scan-input") {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastKeyTime > 120) scanBuffer = "";
+      lastKeyTime = now;
+
+      if (e.key === "Enter") {
+        const code = scanBuffer.trim();
+        if (code.length > 0) {
+          if (activeProjectScan.projectId && activeProjectScan.mode) {
+            processProjectBarcodeScan(activeProjectScan.projectId, activeProjectScan.mode, code);
+          } else {
+            switchTab('inventory');
+            const searchInput = document.getElementById("gear-search");
+            if (searchInput) searchInput.value = code;
+            renderGear();
+          }
+        }
+        scanBuffer = "";
+      } else if (e.key.length === 1) {
+        scanBuffer += e.key;
+      }
+    });
+  </script>
+</body>
+</html>
