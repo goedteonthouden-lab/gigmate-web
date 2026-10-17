@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gigmate Web • Gear & Event Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase Compat Libraries -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { background-color: #070B12; color: #E2E8F0; font-family: system-ui, -apple-system, sans-serif; }
@@ -13,7 +16,6 @@
     .neon-magenta { color: #FF007F; }
     .btn-cyan { background-color: #00F2FE; color: #000; font-weight: 700; }
     .btn-cyan:hover { background-color: #38f9d7; }
-    #item-modal { transition: opacity 0.2s ease-in-out; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -125,4 +127,264 @@
       </button>
 
       <div id="modal-img-container" class="hidden bg-gray-950 rounded-xl border border-gray-800 flex items-center justify-center p-1">
-        <img id
+        <img id="modal-img" src="" alt="Artikel foto" class="w-full max-h-72 object-contain rounded-lg">
+      </div>
+
+      <div>
+        <span class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Artikel Details</span>
+        <h2 id="modal-name" class="text-2xl font-black text-white mt-0.5"></h2>
+      </div>
+
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between py-1 border-b border-gray-800">
+          <span class="text-gray-400">Barcode / QR:</span>
+          <span id="modal-qr" class="font-mono text-cyan-400 font-bold"></span>
+        </div>
+        <div class="flex justify-between py-1 border-b border-gray-800">
+          <span class="text-gray-400">Categorie:</span>
+          <span id="modal-cat" class="text-gray-200"></span>
+        </div>
+        <div class="flex justify-between py-1 border-b border-gray-800">
+          <span class="text-gray-400">Totale Voorraad:</span>
+          <span id="modal-qty" class="text-gray-200 font-bold"></span>
+        </div>
+        <div class="flex justify-between py-1 border-b border-gray-800">
+          <span class="text-gray-400">Vaste opslaglocatie:</span>
+          <span id="modal-loc" class="text-pink-400 font-bold"></span>
+        </div>
+        <div class="py-1">
+          <span class="text-gray-400 block text-xs">Omschrijving / Notities:</span>
+          <p id="modal-desc" class="text-gray-300 text-xs mt-1 italic"></p>
+        </div>
+      </div>
+
+      <button type="button" onclick="closeItemModal()" class="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-sm transition">
+        Sluiten
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Exacte configuratie van jouw Firebase project
+    const firebaseConfig = {
+      apiKey: "AIzaSyBXTBXgrnpU2C1fXDyhwPQiZkKySIbN0WM",
+      projectId: "gigmate-5bcd7",
+      databaseURL: "https://gigmate-5bcd7-default-rtdb.europe-west1.firebasedatabase.app"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    // Expliciet de database-URL meegeven voor de europe-west1 regio
+    const db = firebase.app().database("https://gigmate-5bcd7-default-rtdb.europe-west1.firebasedatabase.app");
+
+    let allGear = [];
+    let allProjects = [];
+
+    const connDot = document.getElementById("conn-dot");
+    const connText = document.getElementById("conn-text");
+    let activeProjectScan = { projectId: null, mode: null };
+
+    // 1. Realtime verbindingsstatus
+    db.ref(".info/connected").on("value", snap => {
+      if (snap.val() === true) {
+        connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500";
+        connText.textContent = "Cloud: Online";
+        connText.className = "text-emerald-400 font-medium";
+      } else {
+        connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-amber-400";
+        connText.textContent = "Cloud: Verbinden...";
+        connText.className = "text-gray-300 font-medium";
+      }
+    });
+
+    // 2. Realtime listener: gear_items
+    db.ref("gear_items").on("value", snapshot => {
+      const val = snapshot.val();
+      allGear = [];
+      if (val) {
+        allGear = Array.isArray(val) ? val.filter(Boolean) : Object.values(val);
+      }
+      document.getElementById("count-gear").textContent = allGear.length;
+      renderGear();
+      renderLocations();
+    }, err => {
+      console.error("Fout bij ophalen gear_items:", err);
+      connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-red-500";
+      connText.textContent = "Cloud: Fout (check regels)";
+      connText.className = "text-red-400 font-medium";
+    });
+
+    // 3. Realtime listener: projects
+    db.ref("projects").on("value", snapshot => {
+      const val = snapshot.val();
+      allProjects = [];
+      if (val) {
+        allProjects = Array.isArray(val) ? val.filter(Boolean) : Object.values(val);
+      }
+      document.getElementById("count-projects").textContent = allProjects.length;
+      renderProjects();
+    }, err => {
+      console.error("Fout bij ophalen projects:", err);
+    });
+
+    // 4. Render Voorraadlijst
+    function renderGear() {
+      const q = (document.getElementById("gear-search").value || "").toLowerCase();
+      const tbody = document.getElementById("gear-table-body");
+      if (!tbody) return;
+      
+      const items = allGear.filter(g => 
+        (g.name || "").toLowerCase().includes(q) ||
+        (g.qrCode || "").toLowerCase().includes(q) ||
+        (g.defaultLocation || "").toLowerCase().includes(q) ||
+        (g.category || "").toLowerCase().includes(q)
+      );
+
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-500">Geen artikelen gevonden in de cloud.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = items.map(g => `
+        <tr class="hover:bg-gray-800/40 transition cursor-pointer select-none" data-qr="${encodeURIComponent(g.qrCode || '')}" onclick="handleItemClick(this)">
+          <td class="p-3">
+            ${(g.photoUri && (g.photoUri.startsWith("data:image") || g.photoUri.startsWith("http"))) 
+                ? `<div class="w-12 h-12 bg-gray-950 rounded-md border border-gray-700 flex items-center justify-center p-0.5">
+                     <img src="${g.photoUri}" class="w-full h-full object-contain">
+                   </div>` 
+                : `<div class="w-12 h-12 rounded-md bg-gray-800 flex items-center justify-center text-gray-500"><i class="fa-solid fa-lightbulb"></i></div>`}
+          </td>
+          <td class="p-3 font-mono text-cyan-400 font-semibold">${g.qrCode || "-"}</td>
+          <td class="p-3 font-bold text-white">${g.name || "-"}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded text-xs bg-cyan-950/60 text-cyan-300 border border-cyan-800/40">${g.category || "-"}</span></td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded text-xs bg-pink-950/60 text-pink-300 border border-pink-800/40 font-semibold">📦 ${g.defaultLocation || "-"}</span></td>
+          <td class="p-3 text-center font-bold text-gray-200">${g.quantity || 1}</td>
+          <td class="p-3 text-xs text-gray-400 max-w-xs truncate">${g.description || "-"}</td>
+        </tr>
+      `).join("");
+    }
+
+    // 5. Render Kratten & Locaties
+    function renderLocations() {
+      const grid = document.getElementById("locations-grid");
+      if (!grid) return;
+      const byLocation = {};
+      allGear.forEach(g => {
+        const loc = (g.defaultLocation || "Niet ingedeeld").trim();
+        if (!byLocation[loc]) byLocation[loc] = [];
+        byLocation[loc].push(g);
+      });
+
+      const locKeys = Object.keys(byLocation).sort();
+      if (locKeys.length === 0) {
+        grid.innerHTML = `<div class="col-span-full p-6 text-center text-gray-500">Nog geen kratlocaties beschikbaar in de cloud.</div>`;
+        return;
+      }
+
+      grid.innerHTML = locKeys.map(loc => {
+        const items = byLocation[loc];
+        const totalQty = items.reduce((sum, i) => sum + (parseInt(i.quantity) || 1), 0);
+        return `
+          <div class="card-bg rounded-xl p-4 border border-gray-800 flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-start mb-2">
+                <h3 class="font-bold text-lg text-white"><i class="fa-solid fa-box-archive mr-2 text-cyan-400"></i>${loc}</h3>
+                <span class="text-xs px-2 py-1 bg-gray-800 text-gray-300 rounded font-semibold">${totalQty} stuks</span>
+              </div>
+              <p class="text-xs text-gray-500 mb-2">Klik op een artikel voor details:</p>
+              <ul class="divide-y divide-gray-800 text-sm mt-1">
+                ${items.map(i => `
+                  <li data-qr="${encodeURIComponent(i.qrCode || '')}" onclick="handleItemClick(this)" class="py-2 px-2 rounded hover:bg-gray-800/80 transition cursor-pointer flex justify-between items-center text-gray-300">
+                    <div class="flex items-center gap-2 truncate">
+                      ${(i.photoUri && (i.photoUri.startsWith("data:image") || i.photoUri.startsWith("http")))
+                          ? `<img src="${i.photoUri}" class="w-7 h-7 object-contain rounded bg-gray-950 border border-gray-700 flex-shrink-0">`
+                          : `<span class="w-2 h-2 rounded-full bg-cyan-400 flex-shrink-0"></span>`}
+                      <span class="truncate font-medium text-white">${i.name}</span>
+                    </div>
+                    <span class="font-mono text-xs text-cyan-400 font-bold bg-gray-900 border border-gray-700 px-1.5 py-0.5 rounded flex-shrink-0 ml-2">${i.quantity || 1}x</span>
+                  </li>
+                `).join("")}
+              </ul>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // 6. Render Projecten
+    function renderProjects() {
+      const container = document.getElementById("projects-list");
+      if (!container) return;
+      if (allProjects.length === 0) {
+        container.innerHTML = `<div class="card-bg p-8 text-center text-gray-500 rounded-xl">Nog geen projecten in de cloud.</div>`;
+        return;
+      }
+
+      container.innerHTML = allProjects.map(p => {
+        const items = p.items ? (Array.isArray(p.items) ? p.items.filter(Boolean) : Object.values(p.items)) : [];
+        const missing = items.filter(i => (parseInt(i.loadedInCount) || 0) > (parseInt(i.loadedOutCount) || 0));
+        
+        const isScanActiveThis = activeProjectScan.projectId == p.id;
+        const currentMode = isScanActiveThis ? activeProjectScan.mode : null;
+
+        return `
+          <div class="card-bg rounded-2xl p-6 border ${isScanActiveThis ? 'border-cyan-500 ring-2 ring-cyan-500/30' : 'border-gray-800'} space-y-5">
+            <div class="flex flex-wrap justify-between items-start gap-4">
+              <div>
+                <h2 class="text-2xl font-black text-white">${p.name || "Naamloos project"}</h2>
+                <p class="text-xs text-gray-400 mt-1"><i class="fa-solid fa-location-dot mr-1 text-pink-500"></i>${p.location || "Onbekende locatie"} • <i class="fa-regular fa-calendar mr-1 text-cyan-400"></i>${p.date || "Geen datum"}</p>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" onclick="setProjectScanMode(${p.id}, 'LOAD_IN')" 
+                        class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${currentMode === 'LOAD_IN' ? 'bg-cyan-400 text-black shadow-lg shadow-cyan-500/20' : 'bg-gray-800 text-cyan-400 hover:bg-gray-700'}">
+                  <i class="fa-solid fa-arrow-down"></i> ${currentMode === 'LOAD_IN' ? 'LOAD-IN ACTIEF' : 'START LOAD-IN'}
+                </button>
+
+                <button type="button" onclick="setProjectScanMode(${p.id}, 'LOAD_OUT')" 
+                        class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${currentMode === 'LOAD_OUT' ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/20' : 'bg-gray-800 text-pink-400 hover:bg-gray-700'}">
+                  <i class="fa-solid fa-arrow-up"></i> ${currentMode === 'LOAD_OUT' ? 'LOAD-OUT ACTIEF' : 'START LOAD-OUT'}
+                </button>
+
+                ${isScanActiveThis ? `
+                  <button type="button" onclick="stopProjectScan()" class="px-3 py-2 bg-gray-900 border border-gray-700 text-gray-400 hover:text-white rounded-xl text-xs">
+                    Stoppen
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+
+            ${isScanActiveThis ? `
+              <div class="bg-gray-900/90 border border-cyan-500/40 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2 text-sm text-cyan-300 font-semibold">
+                  <i class="fa-solid fa-barcode"></i>
+                  <span>Scan nu artikelen voor ${currentMode === 'LOAD_IN' ? 'LOAD-IN' : 'LOAD-OUT'}:</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="text" id="manual-scan-input" placeholder="Typ code & Enter..." 
+                         class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono w-48">
+                  <button type="button" onclick="submitManualScan(${p.id})" class="px-3 py-1.5 btn-cyan text-xs rounded-lg">Scan</button>
+                </div>
+              </div>
+            ` : ''}
+
+            <div>
+              ${missing.length > 0 
+                ? `<div class="px-4 py-2 bg-red-950/60 border border-red-700/60 text-red-300 rounded-xl text-xs font-bold flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i>Let op: nog ${missing.length} apparaat/apparaten niet ingepakt in de kratten!</div>`
+                : `<div class="px-4 py-2 bg-emerald-950/60 border border-emerald-700/60 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2"><i class="fa-solid fa-check"></i>Alles compleet ingepakt in de kratten.</div>`}
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-gray-800">
+              <table class="w-full text-left text-xs text-gray-300">
+                <thead class="bg-gray-900 border-b border-gray-800 text-gray-400 uppercase">
+                  <tr>
+                    <th class="p-3">Apparaat</th>
+                    <th class="p-3">Krat</th>
+                    <th class="p-3 text-center">Nodig</th>
+                    <th class="p-3 text-center">Load-In</th>
+                    <th class="p-3 text-center">Load-Out</th>
+                    <th class="p-3 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y
