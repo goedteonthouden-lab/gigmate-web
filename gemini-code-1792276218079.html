@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gigmate Web • Gear & Event Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background-color: #070B12; color: #E2E8F0; font-family: system-ui, -apple-system, sans-serif; }
+    .card-bg { background-color: #111827; border: 1px solid #1F2937; }
+    .neon-cyan { color: #00F2FE; }
+    .neon-magenta { color: #FF007F; }
+    .btn-cyan { background-color: #00F2FE; color: #000; font-weight: 700; }
+    .btn-cyan:hover { background-color: #38f9d7; }
+    #item-modal { transition: opacity 0.2s ease-in-out; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="border-b border-gray-800 bg-[#0C1322] px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-gray-900 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+        <i class="fa-solid fa-bolt text-lg"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-2xl font-black tracking-widest neon-cyan">GIGMATE</span>
+          <span class="text-xs font-bold neon-magenta tracking-wider px-2 py-0.5 rounded bg-pink-950/60 border border-pink-700/40">CLOUD SYNC</span>
+        </div>
+        <p class="text-xs text-gray-400">Developed by Arjan Bruins • Live Laptop Dashboard</p>
+      </div>
+    </div>
+
+    <!-- Statusindicators -->
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2 bg-gray-900 border border-gray-800 px-3 py-1.5 rounded-xl text-xs">
+        <span id="conn-dot" class="inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
+        <span id="conn-text" class="text-gray-300 font-medium">Cloud: Verbinden...</span>
+      </div>
+
+      <div class="flex items-center gap-2 bg-gray-900 border border-gray-800 px-3 py-1.5 rounded-xl text-xs">
+        <span class="relative flex h-2.5 w-2.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+        </span>
+        <span class="text-gray-300 font-medium"><i class="fa-solid fa-barcode mr-1"></i>Scanner gereed</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigatietabs -->
+  <nav class="bg-[#090F1C] border-b border-gray-800 px-6 flex gap-3 pt-3">
+    <button type="button" onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn px-5 py-2.5 font-bold text-sm border-b-2 border-cyan-400 text-cyan-400 flex items-center gap-2">
+      <i class="fa-solid fa-boxes-stacked"></i> Voorraad (<span id="count-gear">0</span>)
+    </button>
+    <button type="button" onclick="switchTab('locations')" id="tab-locations" class="tab-btn px-5 py-2.5 font-bold text-sm border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-2">
+      <i class="fa-solid fa-box-archive"></i> Kratten & Locaties
+    </button>
+    <button type="button" onclick="switchTab('projects')" id="tab-projects" class="tab-btn px-5 py-2.5 font-bold text-sm border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-2">
+      <i class="fa-solid fa-calendar-days"></i> Evenementen / Gigs (<span id="count-projects">0</span>)
+    </button>
+  </nav>
+
+  <!-- Inhoud secties -->
+  <main class="flex-1 p-6 max-w-7xl w-full mx-auto">
+
+    <!-- SECTIE: VOORRAAD -->
+    <section id="sec-inventory" class="space-y-4">
+      <div class="flex flex-wrap justify-between items-center gap-4">
+        <div class="relative w-80">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-500 text-sm"></i>
+          <input type="text" id="gear-search" placeholder="Zoek op naam, barcode of krat..." oninput="renderGear()" 
+                 class="w-full pl-9 pr-4 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm focus:outline-none focus:border-cyan-400 text-gray-200">
+        </div>
+        <span class="text-xs text-gray-400 italic">💡 Klik op een artikel of scan met je handscanner voor details</span>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-gray-800 card-bg">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-gray-900/80 border-b border-gray-800 text-gray-400 text-xs uppercase tracking-wider">
+            <tr>
+              <th class="p-3">Foto</th>
+              <th class="p-3">Barcode / QR</th>
+              <th class="p-3">Apparaatnaam</th>
+              <th class="p-3">Categorie</th>
+              <th class="p-3">Opslaglocatie</th>
+              <th class="p-3 text-center">Voorraad</th>
+              <th class="p-3">Notities</th>
+            </tr>
+          </thead>
+          <tbody id="gear-table-body" class="divide-y divide-gray-800/60">
+            <tr><td colspan="7" class="p-6 text-center text-gray-500">Laden vanuit cloud...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTIE: KRATTEN & LOCATIES -->
+    <section id="sec-locations" class="hidden space-y-4">
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-400">Overzicht van alle kratten en opslaglocaties. Klik op een artikel voor de specificaties.</p>
+        <span class="text-xs text-cyan-400 font-semibold"><i class="fa-solid fa-arrow-pointer mr-1"></i>Klikbaar overzicht</span>
+      </div>
+      <div id="locations-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="col-span-full p-6 text-center text-gray-500">Locaties laden...</div>
+      </div>
+    </section>
+
+    <!-- SECTIE: EVENEMENTEN / PROJECTEN -->
+    <section id="sec-projects" class="hidden space-y-6">
+      <div id="projects-list" class="space-y-6">
+        <div class="card-bg p-8 text-center text-gray-500 rounded-xl">Projecten laden...</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: ARTIKEL DETAILS POPUP MET VOLLEDIGE PORTRETWEERGAVE -->
+  <div id="item-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="card-bg max-w-md w-full rounded-2xl p-6 border border-gray-700 space-y-4 shadow-2xl relative" onclick="event.stopPropagation()">
+      <button type="button" onclick="closeItemModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white text-lg p-2">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div id="modal-img-container" class="hidden bg-gray-950 rounded-xl border border-gray-800 flex items-center justify-center p-1">
+        <img id
