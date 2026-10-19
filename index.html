@@ -2,98 +2,71 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Gigmate Web • Gear & Event Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- QRCode.js voor directe printbare krat-labels -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body { background-color: #070B12; color: #E2E8F0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background-color: #070B12; color: #E2E8F0; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
     .card-bg { background-color: #111827; border: 1px solid #1F2937; }
     .neon-cyan { color: #00F2FE; }
     .neon-magenta { color: #FF007F; }
     .btn-cyan { background-color: #00F2FE; color: #000; font-weight: 700; }
     .btn-cyan:hover { background-color: #38f9d7; }
-
-    /* Printstijl voor labels */
-    @media print {
-      body * { visibility: hidden; }
-      #print-label-area, #print-label-area * { visibility: visible; }
-      #print-label-area {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100mm;
-        min-height: 140mm;
-        padding: 6mm;
-        background: #fff !important;
-        color: #000 !important;
-        border: 2px solid #000;
-        border-radius: 4mm;
-      }
-    }
+    .tab-active { border-bottom-color: #00F2FE !important; color: #00F2FE !important; }
+    .tab-inactive { border-bottom-color: transparent !important; color: #94A3B8 !important; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
   <!-- Header -->
-  <header class="border-b border-gray-800 bg-[#0C1322] px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+  <header class="border-b border-gray-800 bg-[#0C1322] px-4 py-3 flex flex-wrap justify-between items-center gap-3">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-lg bg-gray-900 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
-        <i class="fa-solid fa-bolt text-lg"></i>
+      <div class="w-9 h-9 rounded-lg bg-gray-900 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+        <i class="fa-solid fa-bolt text-base"></i>
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <span class="text-2xl font-black tracking-widest neon-cyan">GIGMATE</span>
-          <span class="text-xs font-bold neon-magenta tracking-wider px-2 py-0.5 rounded bg-pink-950/60 border border-pink-700/40">CLOUD SYNC</span>
+          <span class="text-xl font-black tracking-widest neon-cyan">GIGMATE</span>
+          <span class="text-[10px] font-bold neon-magenta tracking-wider px-1.5 py-0.5 rounded bg-pink-950/60 border border-pink-700/40">CLOUD</span>
         </div>
-        <p class="text-xs text-gray-400">Developed by Arjan Bruins • Live Laptop Dashboard</p>
+        <p class="text-[10px] text-gray-400">Live Dashboard</p>
       </div>
     </div>
 
     <!-- Statusindicators -->
-    <div class="flex items-center gap-4">
-      <div class="flex items-center gap-2 bg-gray-900 border border-gray-800 px-3 py-1.5 rounded-xl text-xs">
-        <span id="conn-dot" class="inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
-        <span id="conn-text" class="text-gray-300 font-medium">Cloud: Verbinden...</span>
-      </div>
-
-      <div class="flex items-center gap-2 bg-gray-900 border border-gray-800 px-3 py-1.5 rounded-xl text-xs">
-        <span class="relative flex h-2.5 w-2.5">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-        </span>
-        <span class="text-gray-300 font-medium"><i class="fa-solid fa-barcode mr-1"></i>Scanner gereed</span>
+    <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1.5 bg-gray-900 border border-gray-800 px-2.5 py-1 rounded-lg text-xs">
+        <span id="conn-dot" class="inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
+        <span id="conn-text" class="text-gray-300 font-medium text-[11px]">Verbinden...</span>
       </div>
     </div>
   </header>
 
-  <!-- Navigatietabs -->
-  <nav class="bg-[#090F1C] border-b border-gray-800 px-6 flex gap-3 pt-3">
-    <button type="button" onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn px-5 py-2.5 font-bold text-sm border-b-2 border-cyan-400 text-cyan-400 flex items-center gap-2">
+  <!-- Navigatietabs met expliciete data-tab selectors -->
+  <nav class="bg-[#090F1C] border-b border-gray-800 px-4 flex gap-2 pt-2 overflow-x-auto select-none">
+    <button type="button" data-tab="inventory" id="tab-inventory" class="tab-btn px-4 py-2 font-bold text-xs sm:text-sm border-b-2 tab-active flex items-center gap-1.5 whitespace-nowrap">
       <i class="fa-solid fa-boxes-stacked"></i> Voorraad (<span id="count-gear">0</span>)
     </button>
-    <button type="button" onclick="switchTab('locations')" id="tab-locations" class="tab-btn px-5 py-2.5 font-bold text-sm border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-2">
-      <i class="fa-solid fa-box-archive"></i> Kratten & Labels
+    <button type="button" data-tab="locations" id="tab-locations" class="tab-btn px-4 py-2 font-bold text-xs sm:text-sm border-b-2 tab-inactive flex items-center gap-1.5 whitespace-nowrap">
+      <i class="fa-solid fa-box-archive"></i> Kratten & Locaties
     </button>
-    <button type="button" onclick="switchTab('projects')" id="tab-projects" class="tab-btn px-5 py-2.5 font-bold text-sm border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-2">
-      <i class="fa-solid fa-calendar-days"></i> Evenementen / Gigs (<span id="count-projects">0</span>)
+    <button type="button" data-tab="projects" id="tab-projects" class="tab-btn px-4 py-2 font-bold text-xs sm:text-sm border-b-2 tab-inactive flex items-center gap-1.5 whitespace-nowrap">
+      <i class="fa-solid fa-calendar-days"></i> Gigs (<span id="count-projects">0</span>)
     </button>
   </nav>
 
   <!-- Inhoud secties -->
-  <main class="flex-1 p-6 max-w-7xl w-full mx-auto">
+  <main class="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
 
     <!-- SECTIE: VOORRAAD -->
     <section id="sec-inventory" class="space-y-4">
-      <div class="flex flex-wrap justify-between items-center gap-4">
-        <div class="relative w-80">
+      <div class="flex flex-wrap justify-between items-center gap-3">
+        <div class="relative w-full sm:w-80">
           <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-500 text-sm"></i>
-          <input type="text" id="gear-search" placeholder="Zoek op naam, barcode of krat..." oninput="renderGear()" 
+          <input type="text" id="gear-search" placeholder="Zoek artikel, barcode of krat..." 
                  class="w-full pl-9 pr-4 py-2 bg-gray-900 border border-gray-800 rounded-lg text-sm focus:outline-none focus:border-cyan-400 text-gray-200">
         </div>
-        <span class="text-xs text-gray-400 italic">💡 Klik op een artikel of scan met je handscanner voor details</span>
       </div>
 
       <div class="overflow-x-auto rounded-xl border border-gray-800 card-bg">
@@ -101,27 +74,22 @@
           <thead class="bg-gray-900/80 border-b border-gray-800 text-gray-400 text-xs uppercase tracking-wider">
             <tr>
               <th class="p-3">Foto</th>
-              <th class="p-3">Barcode / QR</th>
+              <th class="p-3">Barcode</th>
               <th class="p-3">Apparaatnaam</th>
-              <th class="p-3">Categorie</th>
-              <th class="p-3">Opslaglocatie</th>
-              <th class="p-3 text-center">Voorraad</th>
-              <th class="p-3">Notities</th>
+              <th class="p-3">Krat/Locatie</th>
+              <th class="p-3 text-center">Aantal</th>
             </tr>
           </thead>
           <tbody id="gear-table-body" class="divide-y divide-gray-800/60">
-            <tr><td colspan="7" class="p-6 text-center text-gray-500">Laden vanuit cloud...</td></tr>
+            <tr><td colspan="5" class="p-6 text-center text-gray-500">Laden vanuit cloud...</td></tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <!-- SECTIE: KRATTEN & PRINTBARE LABELS -->
+    <!-- SECTIE: KRATTEN & LOCATIES -->
     <section id="sec-locations" class="hidden space-y-4">
-      <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-400">Overzicht van alle kratten. Print een etiket met krat-QR voor op de flightcase of kist.</p>
-        <span class="text-xs text-cyan-400 font-semibold"><i class="fa-solid fa-print mr-1"></i>Printbare QR-labels</span>
-      </div>
+      <div class="text-xs text-gray-400 mb-1">Tik op een artikel voor details en specificaties:</div>
       <div id="locations-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div class="col-span-full p-6 text-center text-gray-500">Locaties laden...</div>
       </div>
@@ -136,10 +104,10 @@
 
   </main>
 
-  <!-- MODAL: ARTIKEL DETAILS POPUP -->
+  <!-- MODAL: ARTIKEL DETAILS POPUP MET VOLLEDIGE PORTRETWEERGAVE -->
   <div id="item-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="card-bg max-w-md w-full rounded-2xl p-6 border border-gray-700 space-y-4 shadow-2xl relative" onclick="event.stopPropagation()">
-      <button type="button" onclick="closeItemModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white text-lg p-2">
+      <button type="button" id="btn-close-modal" class="absolute right-4 top-4 text-gray-400 hover:text-white text-lg p-2">
         <i class="fa-solid fa-xmark"></i>
       </button>
 
@@ -149,7 +117,7 @@
 
       <div>
         <span class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Artikel Details</span>
-        <h2 id="modal-name" class="text-2xl font-black text-white mt-0.5"></h2>
+        <h2 id="modal-name" class="text-xl font-black text-white mt-0.5"></h2>
       </div>
 
       <div class="space-y-2 text-sm">
@@ -181,40 +149,6 @@
     </div>
   </div>
 
-  <!-- VERBORGEN PRINTBAAR KRAT LABEL OPMAAK -->
-  <div id="print-label-area" class="hidden font-sans">
-    <div class="text-center border-b-2 border-black pb-2 mb-3">
-      <h1 class="text-xl font-black uppercase tracking-widest">GIGMATE • KRAT LABEL</h1>
-      <p class="text-xs text-gray-700">Stage Gear & Flightcase Management</p>
-    </div>
-
-    <div class="flex justify-between items-center my-3 bg-gray-100 p-2 border border-black">
-      <div>
-        <span class="text-[10px] uppercase font-bold text-gray-600 block">Opslaglocatie / Krat:</span>
-        <h2 id="print-crate-title" class="text-2xl font-black uppercase"></h2>
-      </div>
-      <div id="print-qrcode" class="p-1 bg-white border border-black"></div>
-    </div>
-
-    <div class="mt-3">
-      <span class="text-[10px] uppercase font-bold text-gray-600 block mb-1">Vaste Inhoud:</span>
-      <table class="w-full text-left text-xs border-collapse">
-        <thead>
-          <tr class="border-b border-black">
-            <th class="py-1">Aantal</th>
-            <th class="py-1">Artikel</th>
-            <th class="py-1">Code</th>
-          </tr>
-        </thead>
-        <tbody id="print-crate-items" class="divide-y divide-gray-300"></tbody>
-      </table>
-    </div>
-
-    <div class="mt-4 pt-2 border-t border-dashed border-gray-400 text-center">
-      <p class="text-[9px] text-gray-600">Scan deze krat-QR bij Load-In of Load-Out om de hele inhoud in 1x te verwerken.</p>
-    </div>
-  </div>
-
   <script>
     const DB_BASE = "https://gigmate-5bcd7-default-rtdb.europe-west1.firebasedatabase.app";
     let allGear = [];
@@ -224,44 +158,61 @@
     const connText = document.getElementById("conn-text");
     let activeProjectScan = { projectId: null, mode: null };
 
-    // Audio Feedback via Web Audio API
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playBeep(success = true) {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      if (success) {
-        osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.1);
-      } else {
-        osc.frequency.setValueAtTime(320, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.25);
-      }
+    // 1. Veilige Tab Switcher (Touch + Click)
+    function switchTab(targetTab) {
+      const tabs = ['inventory', 'locations', 'projects'];
+      tabs.forEach(t => {
+        const sec = document.getElementById(`sec-${t}`);
+        const btn = document.getElementById(`tab-${t}`);
+        if (sec) {
+          if (t === targetTab) {
+            sec.classList.remove('hidden');
+          } else {
+            sec.classList.add('hidden');
+          }
+        }
+        if (btn) {
+          if (t === targetTab) {
+            btn.className = "tab-btn px-4 py-2 font-bold text-xs sm:text-sm border-b-2 tab-active flex items-center gap-1.5 whitespace-nowrap";
+          } else {
+            btn.className = "tab-btn px-4 py-2 font-bold text-xs sm:text-sm border-b-2 tab-inactive flex items-center gap-1.5 whitespace-nowrap";
+          }
+        }
+      });
     }
 
-    async function updateData() {
-      try {
-        const res = await fetch(`${DB_BASE}/.json?t=${Date.now()}`);
-        if (!res.ok) throw new Error("HTTP error " + res.status);
-        const data = await res.json();
+    // Koppel click- & touchstart-listeners expliciet
+    document.querySelectorAll('.tab-btn').forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        const tab = this.getAttribute('data-tab');
+        if (tab) switchTab(tab);
+      });
+    });
 
-        connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500";
-        connText.textContent = "Cloud: Online";
-        connText.className = "text-emerald-400 font-medium";
+    // 2. Realtime data ophalen via directe REST API met cache-buster
+    async function loadCloudData() {
+      try {
+        const response = await fetch(`${DB_BASE}/.json?_t=${Date.now()}`, {
+          cache: "no-store",
+          headers: { "Accept": "application/json" }
+        });
+        if (!response.ok) throw new Error("HTTP-status " + response.status);
+        const data = await response.json();
+
+        if (connDot && connText) {
+          connDot.className = "inline-flex rounded-full h-2 w-2 bg-emerald-500";
+          connText.textContent = "Online";
+          connText.className = "text-emerald-400 font-medium text-[11px]";
+        }
 
         const rawGear = data ? data.gear_items : null;
         allGear = [];
         if (rawGear) {
           allGear = Array.isArray(rawGear) ? rawGear.filter(Boolean) : Object.values(rawGear);
         }
-        document.getElementById("count-gear").textContent = allGear.length;
+        const countGearEl = document.getElementById("count-gear");
+        if (countGearEl) countGearEl.textContent = allGear.length;
         renderGear();
         renderLocations();
 
@@ -270,21 +221,26 @@
         if (rawProj) {
           allProjects = Array.isArray(rawProj) ? rawProj.filter(Boolean) : Object.values(rawProj);
         }
-        document.getElementById("count-projects").textContent = allProjects.length;
+        const countProjEl = document.getElementById("count-projects");
+        if (countProjEl) countProjEl.textContent = allProjects.length;
         renderProjects();
-      } catch (e) {
-        connDot.className = "inline-flex rounded-full h-2.5 w-2.5 bg-amber-400";
-        connText.textContent = "Cloud: Verbinden...";
-        connText.className = "text-gray-300 font-medium";
+      } catch (err) {
+        console.warn("Cloud fout:", err);
+        if (connDot && connText) {
+          connDot.className = "inline-flex rounded-full h-2 w-2 bg-amber-400";
+          connText.textContent = "Verbinden...";
+          connText.className = "text-gray-300 font-medium text-[11px]";
+        }
       }
     }
 
-    updateData();
-    setInterval(updateData, 2500);
+    loadCloudData();
+    setInterval(loadCloudData, 3000);
 
-    // 1. Render Voorraadlijst
+    // 3. Render Voorraad
     function renderGear() {
-      const q = (document.getElementById("gear-search").value || "").toLowerCase();
+      const searchInput = document.getElementById("gear-search");
+      const q = (searchInput ? searchInput.value : "").toLowerCase();
       const tbody = document.getElementById("gear-table-body");
       if (!tbody) return;
       
@@ -296,30 +252,33 @@
       );
 
       if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-500">Geen artikelen gevonden in de cloud.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-gray-500">Geen artikelen gevonden.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = items.map(g => `
-        <tr class="hover:bg-gray-800/40 transition cursor-pointer select-none" data-qr="${encodeURIComponent(g.qrCode || '')}" onclick="handleItemClick(this)">
-          <td class="p-3">
+        <tr class="hover:bg-gray-800/40 transition cursor-pointer select-none border-b border-gray-800/40" onclick="openItemModal('${encodeURIComponent(g.qrCode || '')}')">
+          <td class="p-2.5">
             ${(g.photoUri && (g.photoUri.startsWith("data:image") || g.photoUri.startsWith("http"))) 
-                ? `<div class="w-12 h-12 bg-gray-950 rounded-md border border-gray-700 flex items-center justify-center p-0.5">
+                ? `<div class="w-10 h-10 bg-gray-950 rounded-md border border-gray-700 flex items-center justify-center p-0.5">
                      <img src="${g.photoUri}" class="w-full h-full object-contain">
                    </div>` 
-                : `<div class="w-12 h-12 rounded-md bg-gray-800 flex items-center justify-center text-gray-500"><i class="fa-solid fa-lightbulb"></i></div>`}
+                : `<div class="w-10 h-10 rounded-md bg-gray-800 flex items-center justify-center text-gray-500 text-xs"><i class="fa-solid fa-lightbulb"></i></div>`}
           </td>
-          <td class="p-3 font-mono text-cyan-400 font-semibold">${g.qrCode || "-"}</td>
-          <td class="p-3 font-bold text-white">${g.name || "-"}</td>
-          <td class="p-3"><span class="px-2 py-0.5 rounded text-xs bg-cyan-950/60 text-cyan-300 border border-cyan-800/40">${g.category || "-"}</span></td>
-          <td class="p-3"><span class="px-2 py-0.5 rounded text-xs bg-pink-950/60 text-pink-300 border border-pink-800/40 font-semibold">📦 ${g.defaultLocation || "-"}</span></td>
-          <td class="p-3 text-center font-bold text-gray-200">${g.quantity || 1}</td>
-          <td class="p-3 text-xs text-gray-400 max-w-xs truncate">${g.description || "-"}</td>
+          <td class="p-2.5 font-mono text-cyan-400 font-semibold text-xs">${g.qrCode || "-"}</td>
+          <td class="p-2.5 font-bold text-white text-xs">${g.name || "-"}</td>
+          <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[11px] bg-pink-950/60 text-pink-300 border border-pink-800/40 font-semibold whitespace-nowrap">📦 ${g.defaultLocation || "-"}</span></td>
+          <td class="p-2.5 text-center font-bold text-gray-200 text-xs">${g.quantity || 1}</td>
         </tr>
       `).join("");
     }
 
-    // 2. Render Kratten & Printbare Labels
+    const searchBox = document.getElementById("gear-search");
+    if (searchBox) {
+      searchBox.addEventListener("input", renderGear);
+    }
+
+    // 4. Render Kratten & Locaties
     function renderLocations() {
       const grid = document.getElementById("locations-grid");
       if (!grid) return;
@@ -332,7 +291,7 @@
 
       const locKeys = Object.keys(byLocation).sort();
       if (locKeys.length === 0) {
-        grid.innerHTML = `<div class="col-span-full p-6 text-center text-gray-500">Nog geen kratlocaties beschikbaar in de cloud.</div>`;
+        grid.innerHTML = `<div class="col-span-full p-6 text-center text-gray-500">Nog geen kratlocaties beschikbaar.</div>`;
         return;
       }
 
@@ -340,25 +299,18 @@
         const items = byLocation[loc];
         const totalQty = items.reduce((sum, i) => sum + (parseInt(i.quantity) || 1), 0);
         return `
-          <div class="card-bg rounded-xl p-5 border border-gray-800 flex flex-col justify-between">
+          <div class="card-bg rounded-xl p-4 border border-gray-800 flex flex-col justify-between">
             <div>
               <div class="flex justify-between items-start mb-2">
-                <div>
-                  <h3 class="font-bold text-lg text-white"><i class="fa-solid fa-box-archive mr-2 text-cyan-400"></i>${loc}</h3>
-                  <span class="text-xs text-gray-400">${items.length} artikelen • ${totalQty} stuks</span>
-                </div>
-                <button type="button" onclick="printCrateLabel('${encodeURIComponent(loc)}')" 
-                        class="px-2.5 py-1.5 bg-gray-900 hover:bg-gray-800 border border-gray-700 text-xs text-cyan-400 rounded-lg font-bold flex items-center gap-1.5 transition">
-                  <i class="fa-solid fa-print"></i> Label
-                </button>
+                <h3 class="font-bold text-base text-white"><i class="fa-solid fa-box-archive mr-2 text-cyan-400"></i>${loc}</h3>
+                <span class="text-xs px-2 py-0.5 bg-gray-800 text-gray-300 rounded font-semibold">${totalQty} stuks</span>
               </div>
-
-              <ul class="divide-y divide-gray-800 text-sm mt-3">
+              <ul class="divide-y divide-gray-800 text-xs mt-1">
                 ${items.map(i => `
-                  <li data-qr="${encodeURIComponent(i.qrCode || '')}" onclick="handleItemClick(this)" class="py-2 px-2 rounded hover:bg-gray-800/80 transition cursor-pointer flex justify-between items-center text-gray-300">
+                  <li onclick="openItemModal('${encodeURIComponent(i.qrCode || '')}')" class="py-2 px-1 rounded hover:bg-gray-800/80 transition cursor-pointer flex justify-between items-center text-gray-300">
                     <div class="flex items-center gap-2 truncate">
                       ${(i.photoUri && (i.photoUri.startsWith("data:image") || i.photoUri.startsWith("http")))
-                          ? `<img src="${i.photoUri}" class="w-7 h-7 object-contain rounded bg-gray-950 border border-gray-700 flex-shrink-0">`
+                          ? `<img src="${i.photoUri}" class="w-6 h-6 object-contain rounded bg-gray-950 border border-gray-700 flex-shrink-0">`
                           : `<span class="w-2 h-2 rounded-full bg-cyan-400 flex-shrink-0"></span>`}
                       <span class="truncate font-medium text-white">${i.name}</span>
                     </div>
@@ -372,39 +324,7 @@
       }).join("");
     }
 
-    // 3. Krat Label Printfunctie
-    function printCrateLabel(encodedLoc) {
-      const loc = decodeURIComponent(encodedLoc);
-      const items = allGear.filter(g => (g.defaultLocation || "Niet ingedeeld").trim().toLowerCase() === loc.toLowerCase());
-      
-      document.getElementById("print-crate-title").textContent = loc;
-      const tbody = document.getElementById("print-crate-items");
-      tbody.innerHTML = items.map(i => `
-        <tr>
-          <td class="py-1 font-bold">${i.quantity || 1}x</td>
-          <td class="py-1">${i.name}</td>
-          <td class="py-1 font-mono text-[10px]">${i.qrCode}</td>
-        </tr>
-      `).join("");
-
-      // Genereer overkoepelende Krat-QR code (bijv. "CRATE:Krat 4")
-      const qrContainer = document.getElementById("print-qrcode");
-      qrContainer.innerHTML = "";
-      new QRCode(qrContainer, {
-        text: `CRATE:${loc}`,
-        width: 80,
-        height: 80,
-        correctLevel: QRCode.CorrectLevel.M
-      });
-
-      document.getElementById("print-label-area").classList.remove("hidden");
-      setTimeout(() => {
-        window.print();
-        document.getElementById("print-label-area").classList.add("hidden");
-      }, 200);
-    }
-
-    // 4. Render Projecten
+    // 5. Render Projecten
     function renderProjects() {
       const container = document.getElementById("projects-list");
       if (!container) return;
@@ -415,4 +335,195 @@
 
       container.innerHTML = allProjects.map(p => {
         const items = p.items ? (Array.isArray(p.items) ? p.items.filter(Boolean) : Object.values(p.items)) : [];
-        const missing = items
+        const missing = items.filter(i => (parseInt(i.loadedInCount) || 0) > (parseInt(i.loadedOutCount) || 0));
+        const isScanActiveThis = activeProjectScan.projectId == p.id;
+        const currentMode = isScanActiveThis ? activeProjectScan.mode : null;
+
+        return `
+          <div class="card-bg rounded-xl p-4 sm:p-6 border ${isScanActiveThis ? 'border-cyan-500' : 'border-gray-800'} space-y-4">
+            <div class="flex flex-wrap justify-between items-start gap-3">
+              <div>
+                <h2 class="text-xl font-black text-white">${p.name || "Naamloos project"}</h2>
+                <p class="text-xs text-gray-400 mt-0.5"><i class="fa-solid fa-location-dot mr-1 text-pink-500"></i>${p.location || "Onbekend"} • <i class="fa-regular fa-calendar mr-1 text-cyan-400"></i>${p.date || "Geen datum"}</p>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" onclick="setProjectScanMode(${p.id}, 'LOAD_IN')" 
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 ${currentMode === 'LOAD_IN' ? 'bg-cyan-400 text-black' : 'bg-gray-800 text-cyan-400'}">
+                  <i class="fa-solid fa-arrow-down"></i> ${currentMode === 'LOAD_IN' ? 'LOAD-IN ACTIEF' : 'LOAD-IN'}
+                </button>
+
+                <button type="button" onclick="setProjectScanMode(${p.id}, 'LOAD_OUT')" 
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 ${currentMode === 'LOAD_OUT' ? 'bg-pink-500 text-white' : 'bg-gray-800 text-pink-400'}">
+                  <i class="fa-solid fa-arrow-up"></i> ${currentMode === 'LOAD_OUT' ? 'LOAD-OUT ACTIEF' : 'LOAD-OUT'}
+                </button>
+
+                ${isScanActiveThis ? `
+                  <button type="button" onclick="stopProjectScan()" class="px-2.5 py-1.5 bg-gray-900 border border-gray-700 text-gray-400 rounded-lg text-xs">
+                    Stoppen
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+
+            ${isScanActiveThis ? `
+              <div class="bg-gray-900 border border-cyan-500/40 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
+                <span class="text-xs text-cyan-300 font-semibold">Invoeren voor ${currentMode === 'LOAD_IN' ? 'LOAD-IN' : 'LOAD-OUT'}:</span>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                  <input type="text" id="manual-scan-input" placeholder="Barcode & Enter..." 
+                         onkeydown="if(event.key === 'Enter') submitManualScan(${p.id})"
+                         class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono flex-1 sm:w-44">
+                  <button type="button" onclick="submitManualScan(${p.id})" class="px-3 py-1.5 btn-cyan text-xs rounded-lg">Scan</button>
+                </div>
+              </div>
+            ` : ''}
+
+            <div>
+              ${missing.length > 0 
+                ? `<div class="px-3 py-1.5 bg-red-950/60 border border-red-700/60 text-red-300 rounded-lg text-xs font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Nog ${missing.length} apparaat/apparaten niet ingepakt!</div>`
+                : `<div class="px-3 py-1.5 bg-emerald-950/60 border border-emerald-700/60 text-emerald-300 rounded-lg text-xs font-bold"><i class="fa-solid fa-check mr-1"></i>Alles compleet ingepakt in kratten.</div>`}
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-gray-800">
+              <table class="w-full text-left text-xs text-gray-300">
+                <thead class="bg-gray-900 border-b border-gray-800 text-gray-400 uppercase">
+                  <tr>
+                    <th class="p-2.5">Apparaat</th>
+                    <th class="p-2.5">Krat</th>
+                    <th class="p-2.5 text-center">Nodig</th>
+                    <th class="p-2.5 text-center">In</th>
+                    <th class="p-2.5 text-center">Uit</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800/40">
+                  ${items.map(it => `
+                    <tr class="hover:bg-gray-800/30">
+                      <td class="p-2.5 font-semibold text-white cursor-pointer hover:text-cyan-400" onclick="openItemModal('${encodeURIComponent(it.gearQr || '')}')">${it.gearName || it.gearQr}</td>
+                      <td class="p-2.5 text-pink-400 font-semibold">📦 ${it.defaultLocation || "-"}</td>
+                      <td class="p-2.5 text-center font-bold text-gray-300">${it.requiredCount || 1}</td>
+                      <td class="p-2.5 text-center text-cyan-400 font-bold">${it.loadedInCount || 0}</td>
+                      <td class="p-2.5 text-center text-pink-400 font-bold">${it.loadedOutCount || 0}</td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // 6. Modal Popup
+    function openItemModal(encodedQr) {
+      if (!encodedQr) return;
+      const qrCode = decodeURIComponent(encodedQr);
+      const item = allGear.find(g => (g.qrCode || "").trim().toLowerCase() === qrCode.trim().toLowerCase());
+      if (!item) return;
+
+      document.getElementById("modal-name").textContent = item.name || "Onbekend artikel";
+      document.getElementById("modal-qr").textContent = item.qrCode || "-";
+      document.getElementById("modal-cat").textContent = item.category || "-";
+      document.getElementById("modal-qty").textContent = (item.quantity || 1) + " stuk(s)";
+      document.getElementById("modal-loc").textContent = "📦 " + (item.defaultLocation || "Niet ingedeeld");
+      document.getElementById("modal-desc").textContent = item.description || "Geen extra opmerkingen.";
+
+      const imgCont = document.getElementById("modal-img-container");
+      const img = document.getElementById("modal-img");
+      if (item.photoUri && (item.photoUri.startsWith("data:image") || item.photoUri.startsWith("http"))) {
+        img.src = item.photoUri;
+        imgCont.classList.remove("hidden");
+      } else {
+        img.src = "";
+        imgCont.classList.add("hidden");
+      }
+
+      const modal = document.getElementById("item-modal");
+      if (modal) modal.classList.remove("hidden");
+    }
+
+    function closeItemModal() {
+      const modal = document.getElementById("item-modal");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    const btnClose = document.getElementById("btn-close-modal");
+    if (btnClose) btnClose.addEventListener("click", closeItemModal);
+
+    window.addEventListener("click", e => {
+      const modal = document.getElementById("item-modal");
+      if (e.target === modal) closeItemModal();
+    });
+
+    // 7. Load-In / Load-Out
+    function setProjectScanMode(projectId, mode) {
+      if (activeProjectScan.projectId === projectId && activeProjectScan.mode === mode) {
+        stopProjectScan();
+      } else {
+        activeProjectScan = { projectId, mode };
+        renderProjects();
+        setTimeout(() => {
+          const input = document.getElementById("manual-scan-input");
+          if (input) input.focus();
+        }, 100);
+      }
+    }
+
+    function stopProjectScan() {
+      activeProjectScan = { projectId: null, mode: null };
+      renderProjects();
+    }
+
+    async function submitManualScan(projectId) {
+      const input = document.getElementById("manual-scan-input");
+      if (!input) return;
+      const code = input.value.trim();
+      if (!code) return;
+      
+      await processProjectBarcodeScan(projectId, activeProjectScan.mode, code);
+      input.value = "";
+      input.focus();
+    }
+
+    async function processProjectBarcodeScan(projectId, mode, code) {
+      const proj = allProjects.find(p => p.id == projectId);
+      if (!proj) return;
+
+      const gearInfo = allGear.find(g => (g.qrCode || "").trim().toLowerCase() === code.trim().toLowerCase());
+      if (!gearInfo) {
+        alert(`❌ Barcode "${code}" bestaat niet in de voorraad!`);
+        return;
+      }
+
+      const items = proj.items ? (Array.isArray(proj.items) ? [...proj.items] : Object.values(proj.items)) : [];
+      let entryIndex = items.findIndex(i => (i.gearQr || "").trim().toLowerCase() === code.trim().toLowerCase());
+
+      if (mode === "LOAD_IN") {
+        if (entryIndex !== -1) {
+          const entry = items[entryIndex];
+          const curIn = parseInt(entry.loadedInCount) || 0;
+          const req = parseInt(entry.requiredCount) || 1;
+          const maxStock = parseInt(gearInfo.quantity) || 99;
+
+          if (curIn < req) {
+            entry.loadedInCount = curIn + 1;
+            alert(`✅ Ingeladen: ${entry.gearName || code} (${entry.loadedInCount}/${req})`);
+          } else if (curIn < maxStock) {
+            entry.requiredCount = req + 1;
+            entry.loadedInCount = curIn + 1;
+            alert(`➕ Extra exemplaar ingeladen: ${entry.gearName || code}`);
+          } else {
+            alert(`⚠️ Alle ${maxStock} stuks uit voorraad zijn al ingeladen!`);
+            return;
+          }
+        } else {
+          items.push({
+            gearQr: gearInfo.qrCode,
+            gearName: gearInfo.name,
+            defaultLocation: gearInfo.defaultLocation,
+            category: gearInfo.category,
+            photoUri: gearInfo.photoUri || null,
+            requiredCount: 1,
+            loadedInCount: 1,
+            loadedOutCount: 0
+          });
+          alert(`➕
