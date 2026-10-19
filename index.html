@@ -32,16 +32,21 @@
     .img-thumb { width: 42px; height: 42px; object-fit: contain; background: #000; border-radius: 6px; border: 1px solid #374151; display: block; }
     .no-img { width: 42px; height: 42px; background: #1E293B; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #64748B; }
     
-    .grid-locs { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .grid-locs { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
     .loc-card { background: #111827; border: 1px solid #1F2937; border-radius: 10px; padding: 12px; }
-    .loc-title { font-weight: bold; font-size: 14px; color: #fff; margin-bottom: 8px; display: flex; justify-content: space-between; }
-    .loc-item { padding: 6px 0; border-bottom: 1px solid #1E293B; display: flex; justify-content: space-between; font-size: 12px; }
+    .loc-title { font-weight: bold; font-size: 14px; color: #fff; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .btn-zpl { background: #1E293B; border: 1px solid #00F2FE; color: #00F2FE; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 6px; cursor: pointer; }
+    .btn-zpl:hover { background: #00F2FE; color: #000; }
+    .loc-item { padding: 6px 0; border-bottom: 1px solid #1E293B; display: flex; justify-content: space-between; font-size: 12px; cursor: pointer; }
     
-    /* Modal */
-    #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 99; align-items: center; justify-content: center; padding: 16px; }
-    .modal-box { background: #111827; border: 1px solid #374151; border-radius: 14px; width: 100%; max-width: 400px; padding: 18px; }
+    /* Modals */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 99; align-items: center; justify-content: center; padding: 16px; }
+    .modal-box { background: #111827; border: 1px solid #374151; border-radius: 14px; width: 100%; max-width: 480px; padding: 18px; max-height: 90vh; overflow-y: auto; }
     .btn-close { width: 100%; background: #1F2937; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; margin-top: 14px; cursor: pointer; }
+    .btn-action { background: #00F2FE; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; }
+    .btn-action:hover { background: #38f9d7; }
     .hidden { display: none !important; }
+    textarea.zpl-code { width: 100%; height: 140px; background: #070B12; border: 1px solid #374151; color: #00F2FE; font-family: monospace; font-size: 11px; padding: 8px; border-radius: 6px; resize: vertical; outline: none; }
   </style>
 </head>
 <body>
@@ -57,7 +62,7 @@
     </div>
   </header>
 
-  <!-- Navigatietabs met inline directe functieaanroepen -->
+  <!-- Navigatietabs -->
   <nav>
     <button type="button" id="btn-inventory" class="tab-btn active" onclick="switchTab('inventory')">Voorraad (<span id="c-gear">0</span>)</button>
     <button type="button" id="btn-locations" class="tab-btn" onclick="switchTab('locations')">Kratten & Locaties</button>
@@ -101,8 +106,8 @@
     </div>
   </main>
 
-  <!-- MODAL DETAILS POPUP -->
-  <div id="modal" onclick="closeModal()">
+  <!-- MODAL 1: ARTIKEL DETAILS -->
+  <div id="modal" class="modal-overlay" onclick="closeModal()">
     <div class="modal-box" onclick="event.stopPropagation()">
       <div id="modal-img-wrap" style="text-align:center; margin-bottom:12px; background:#000; padding:6px; border-radius:8px;">
         <img id="modal-img" src="" style="max-height:220px; max-width:100%; object-fit:contain;">
@@ -118,12 +123,41 @@
     </div>
   </div>
 
+  <!-- MODAL 2: ZPL KRATLABEL GENERATOR -->
+  <div id="zpl-modal" class="modal-overlay" onclick="closeZplModal()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 id="zpl-modal-title" style="font-size:17px; font-weight:bold; color:#00F2FE;">Zebra Kratlabel (102x150mm)</h2>
+        <span style="font-size:11px; background:#1F2937; padding:2px 6px; border-radius:4px; color:#aaa;">203 DPI</span>
+      </div>
+      
+      <p style="font-size:12px; color:#94A3B8; margin-bottom:8px;">
+        Gereed voor thermische Zebra printers (ZPL II formaat):
+      </p>
+
+      <textarea id="zpl-output" class="zpl-code" readonly></textarea>
+
+      <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+        <button type="button" class="btn-action" onclick="copyZplCode()">📋 Kopieer ZPL</button>
+        <button type="button" class="btn-action" style="background:#FF007F; color:#fff;" onclick="downloadZplFile()">💾 Download .ZPL</button>
+        <button type="button" class="btn-action" style="background:#1E293B; color:#00F2FE; border:1px solid #00F2FE;" onclick="previewZplLabel()">👁️ Bekijk Voorbeeld</button>
+      </div>
+
+      <div id="zpl-preview-wrap" style="display:none; margin-top:12px; text-align:center; background:#000; padding:8px; border-radius:8px;">
+        <img id="zpl-preview-img" src="" style="max-width:100%; max-height:260px; object-fit:contain; border:1px solid #333;">
+      </div>
+
+      <button type="button" class="btn-close" onclick="closeZplModal()">Sluiten</button>
+    </div>
+  </div>
+
   <script>
     var DB_BASE = "https://gigmate-5bcd7-default-rtdb.europe-west1.firebasedatabase.app";
     var allGear = [];
     var allProjects = [];
+    var currentZplCrate = "";
 
-    // 1. Directe Tabwisselaar (onbreekbaar)
+    // 1. Tabwisselaar
     function switchTab(name) {
       document.getElementById('tab-inventory-content').classList.add('hidden');
       document.getElementById('tab-locations-content').classList.add('hidden');
@@ -137,7 +171,7 @@
       document.getElementById('btn-' + name).classList.add('active');
     }
 
-    // 2. Universele JSONP Callback: passeert alle mobiele CORS- en sandbox-restricties
+    // 2. Data ophalen via JSONP
     window.onCloudDataLoaded = function(data) {
       document.getElementById('conn-dot').className = "dot green";
       document.getElementById('conn-text').textContent = "Online";
@@ -176,7 +210,6 @@
       document.body.appendChild(script);
     }
 
-    // Direct starten en elke 3s verversen
     fetchCloud();
     setInterval(fetchCloud, 3000);
 
@@ -214,7 +247,7 @@
       tbody.innerHTML = html;
     }
 
-    // 4. Render Kratten
+    // 4. Render Kratten & Locaties (inclusief ZPL-printknop)
     function renderLocations() {
       var grid = document.getElementById('loc-grid');
       var byLoc = {};
@@ -237,7 +270,10 @@
         var items = byLoc[locName];
         
         html += '<div class="loc-card">' +
-                  '<div class="loc-title"><span>📦 ' + locName + '</span><span style="font-size:11px; color:#94A3B8;">' + items.length + ' artikelen</span></div>';
+                  '<div class="loc-title">' +
+                    '<span>📦 ' + locName + '</span>' +
+                    '<button type="button" class="btn-zpl" onclick="openZplModal(\'' + encodeURIComponent(locName) + '\')">🏷️ ZPL Label</button>' +
+                  '</div>';
         
         for (var k = 0; k < items.length; k++) {
           var it = items[k];
@@ -288,7 +324,108 @@
       cont.innerHTML = html;
     }
 
-    // 6. Modal Popup Functies
+    // 6. ZPL Label Generator (102 x 150 mm / 203 DPI = 812 x 1218 dots)
+    function generateZpl(locName, items) {
+      var barcodeData = locName.toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
+      if (!barcodeData) barcodeData = "KRAT";
+
+      var z = "^XA\n";
+      z += "^PW812\n";
+      z += "^LL1218\n";
+      
+      // Buitenkader
+      z += "^FO40,40^GB732,1138,4^FS\n";
+      
+      // Header
+      z += "^FO70,70^A0N,50,50^FDGIGMATE INVENTORY^FS\n";
+      z += "^FO70,130^GB672,3,3^FS\n";
+      
+      // Kratnaam groot
+      z += "^FO70,160^A0N,75,75^FDKRAT: " + locName.toUpperCase() + "^FS\n";
+      
+      // Barcode (Code 128)
+      z += "^FO70,260^BY3,3,90\n";
+      z += "^BCN,90,Y,N,N\n";
+      z += "^FD" + barcodeData + "^FS\n";
+      
+      z += "^FO70,410^GB672,2,2^FS\n";
+      z += "^FO70,430^A0N,32,32^FDVASTE APPARATUUR (" + items.length + " TYPE ITEMS):^FS\n";
+      
+      // Items opsommen
+      var y = 480;
+      var maxItems = Math.min(items.length, 12);
+      for (var i = 0; i < maxItems; i++) {
+        var it = items[i];
+        var nameClean = (it.name || "Apparaat").substring(0, 24);
+        var qrClean = (it.qrCode || "").substring(0, 10);
+        var qty = it.quantity || 1;
+        
+        z += "^FO70," + y + "^A0N,28,28^FD• [" + qrClean + "] " + nameClean + "^FS\n";
+        z += "^FO680," + y + "^A0N,28,28^FD" + qty + "x^FS\n";
+        y += 44;
+      }
+      
+      if (items.length > 12) {
+        z += "^FO70," + y + "^A0N,24,24^FD... en nog " + (items.length - 12) + " extra artikel(en)^FS\n";
+      }
+      
+      // Footer
+      z += "^FO70,1110^A0N,22,22^FDGIGMATE STAGE GEAR • PRINTDATUM: " + new Date().toLocaleDateString('nl-NL') + "^FS\n";
+      z += "^XZ\n";
+      return z;
+    }
+
+    function openZplModal(encLoc) {
+      var locName = decodeURIComponent(encLoc);
+      currentZplCrate = locName;
+
+      var items = allGear.filter(function(g) {
+        return (g.defaultLocation || "Overig").trim().toLowerCase() === locName.toLowerCase();
+      });
+
+      var zplCode = generateZpl(locName, items);
+      document.getElementById('zpl-output').value = zplCode;
+      document.getElementById('zpl-modal-title').textContent = "Zebra Label: " + locName;
+      document.getElementById('zpl-preview-wrap').style.display = 'none';
+      document.getElementById('zpl-modal').style.display = 'flex';
+    }
+
+    function closeZplModal() {
+      document.getElementById('zpl-modal').style.display = 'none';
+    }
+
+    function copyZplCode() {
+      var textarea = document.getElementById('zpl-output');
+      textarea.select();
+      document.execCommand('copy');
+      alert('✅ ZPL-code gekopieerd naar klembord!');
+    }
+
+    function downloadZplFile() {
+      var zpl = document.getElementById('zpl-output').value;
+      var blob = new Blob([zpl], { type: 'text/plain' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = "label_" + currentZplCrate.replace(/[^a-zA-Z0-9]/g, '_') + ".zpl";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function previewZplLabel() {
+      var zpl = document.getElementById('zpl-output').value;
+      var wrap = document.getElementById('zpl-preview-wrap');
+      var img = document.getElementById('zpl-preview-img');
+      
+      // Labelary REST API (4x6 inch, 8dpmm = 203 DPI)
+      var url = "https://api.labelary.com/v1/printers/8dpmm/labels/4x6/0/" + encodeURIComponent(zpl);
+      img.src = url;
+      wrap.style.display = 'block';
+    }
+
+    // 7. Modal Details Popups
     function openModal(encCode) {
       var code = decodeURIComponent(encCode);
       var item = allGear.find(function(g) { return (g.qrCode || "").toLowerCase() === code.toLowerCase(); });
