@@ -6,86 +6,126 @@
   <title>Gigmate Web • Live Dashboard</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background-color: #070B12; color: #E2E8F0; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
-    header { background-color: #0C1322; border-bottom: 1px solid #1F2937; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+    body { background-color: #070B12; color: #E2E8F0; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; padding-bottom: 60px; }
+    header { background-color: #0C1322; border-bottom: 1px solid #1F2937; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
     .neon-cyan { color: #00F2FE; }
     .neon-magenta { color: #FF007F; }
-    .status-badge { background: #111827; border: 1px solid #1F2937; border-radius: 20px; padding: 4px 10px; font-size: 11px; display: flex; align-items: center; gap: 6px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #F59E0B; }
-    .dot.green { background: #10B981; }
+    
+    .status-group { display: flex; align-items: center; gap: 8px; }
+    .status-badge { background: #111827; border: 1px solid #1F2937; border-radius: 20px; padding: 5px 12px; font-size: 11px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #F59E0B; display: inline-block; }
+    .dot.green { background: #10B981; box-shadow: 0 0 8px #10B981; }
     
     nav { background: #090F1C; border-bottom: 1px solid #1F2937; display: flex; overflow-x: auto; padding: 0 12px; gap: 8px; }
     .tab-btn { background: none; border: none; border-bottom: 3px solid transparent; color: #94A3B8; font-weight: 700; font-size: 13px; padding: 12px 14px; cursor: pointer; white-space: nowrap; }
     .tab-btn.active { color: #00F2FE; border-bottom-color: #00F2FE; }
     
-    main { padding: 14px; max-width: 1100px; margin: 0 auto; }
-    .card { background: #111827; border: 1px solid #1F2937; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+    main { padding: 14px; max-width: 1150px; margin: 0 auto; }
+    .card { background: #111827; border: 1px solid #1F2937; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .card.scan-active { border-color: #00F2FE; box-shadow: 0 0 15px rgba(0, 242, 254, 0.15); }
+    
     .search-input { width: 100%; background: #070B12; border: 1px solid #374151; color: #fff; padding: 10px 14px; border-radius: 8px; font-size: 13px; outline: none; margin-bottom: 12px; }
     .search-input:focus { border-color: #00F2FE; }
     
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th { text-align: left; padding: 8px; color: #94A3B8; border-bottom: 1px solid #1F2937; font-size: 11px; text-transform: uppercase; }
-    td { padding: 8px; border-bottom: 1px solid #1F2937; vertical-align: middle; }
-    tr:active { background: #1E293B; }
+    th { text-align: left; padding: 10px 8px; color: #94A3B8; border-bottom: 1px solid #1F2937; font-size: 11px; text-transform: uppercase; background: rgba(17, 24, 39, 0.6); }
+    td { padding: 10px 8px; border-bottom: 1px solid #1F2937; vertical-align: middle; }
+    tr.clickable-row { cursor: pointer; }
+    tr.clickable-row:hover { background: rgba(30, 41, 59, 0.6); }
     
-    .badge-crate { background: rgba(255, 0, 127, 0.15); color: #FF80BF; border: 1px solid rgba(255, 0, 127, 0.3); border-radius: 6px; padding: 2px 6px; font-size: 10px; font-weight: bold; white-space: nowrap; }
-    .img-thumb { width: 42px; height: 42px; object-fit: contain; background: #000; border-radius: 6px; border: 1px solid #374151; display: block; }
-    .no-img { width: 42px; height: 42px; background: #1E293B; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #64748B; }
+    .badge-crate { background: rgba(255, 0, 127, 0.15); color: #FF80BF; border: 1px solid rgba(255, 0, 127, 0.3); border-radius: 6px; padding: 3px 7px; font-size: 11px; font-weight: bold; white-space: nowrap; display: inline-block; }
+    .badge-cat { background: rgba(0, 242, 254, 0.1); color: #67E8F9; border: 1px solid rgba(0, 242, 254, 0.25); border-radius: 6px; padding: 2px 6px; font-size: 10px; white-space: nowrap; }
+    .img-thumb { width: 44px; height: 44px; object-fit: contain; background: #000; border-radius: 6px; border: 1px solid #374151; display: block; }
+    .no-img { width: 44px; height: 44px; background: #1E293B; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #64748B; }
     
-    .grid-locs { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
-    .loc-card { background: #111827; border: 1px solid #1F2937; border-radius: 10px; padding: 12px; }
-    .loc-title { font-weight: bold; font-size: 14px; color: #fff; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-    .btn-zpl { background: #1E293B; border: 1px solid #00F2FE; color: #00F2FE; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 6px; cursor: pointer; }
+    .grid-locs { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+    .loc-card { background: #111827; border: 1px solid #1F2937; border-radius: 10px; padding: 14px; }
+    .loc-title { font-weight: bold; font-size: 14px; color: #fff; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .btn-zpl { background: #1E293B; border: 1px solid #00F2FE; color: #00F2FE; font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
     .btn-zpl:hover { background: #00F2FE; color: #000; }
-    .loc-item { padding: 6px 0; border-bottom: 1px solid #1E293B; display: flex; justify-content: space-between; font-size: 12px; cursor: pointer; }
+    .loc-item { padding: 7px 4px; border-bottom: 1px solid #1E293B; display: flex; justify-content: space-between; font-size: 12px; cursor: pointer; border-radius: 4px; }
+    .loc-item:hover { background: #1E293B; }
+
+    /* Project Scan Balk & Knoppen */
+    .proj-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+    .btn-mode { border: none; padding: 8px 14px; border-radius: 8px; font-weight: 800; font-size: 11px; cursor: pointer; transition: 0.15s; }
+    .btn-loadin { background: #1E293B; color: #00F2FE; border: 1px solid rgba(0, 242, 254, 0.4); }
+    .btn-loadin.active { background: #00F2FE; color: #000; box-shadow: 0 0 12px rgba(0, 242, 254, 0.4); }
+    .btn-loadout { background: #1E293B; color: #FF80BF; border: 1px solid rgba(255, 0, 127, 0.4); }
+    .btn-loadout.active { background: #FF007F; color: #fff; box-shadow: 0 0 12px rgba(255, 0, 127, 0.4); }
+    .btn-stop { background: #070B12; color: #94A3B8; border: 1px solid #374151; padding: 8px 12px; border-radius: 8px; font-size: 11px; cursor: pointer; }
+
+    .scan-bar { background: #070B12; border: 1px solid #00F2FE; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+    .scan-input-group { display: flex; gap: 8px; flex: 1; max-width: 340px; }
+    .scan-input { flex: 1; background: #111827; border: 1px solid #374151; color: #fff; padding: 8px 12px; border-radius: 6px; font-family: monospace; font-size: 13px; outline: none; }
+    .scan-input:focus { border-color: #00F2FE; }
     
+    .alert-missing { background: rgba(127, 29, 29, 0.4); border: 1px solid #B91C1C; color: #FCA5A5; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; margin-bottom: 12px; }
+    .alert-complete { background: rgba(6, 78, 59, 0.4); border: 1px solid #047857; color: #6EE7B7; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; margin-bottom: 12px; }
+
+    /* Toast Notificatie */
+    #toast { position: fixed; bottom: 20px; right: 20px; left: 20px; max-width: 420px; margin: 0 auto; padding: 12px 16px; border-radius: 10px; font-weight: bold; font-size: 13px; z-index: 200; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.7); text-align: center; }
+    .toast-ok { background: #065F46; border: 2px solid #10B981; color: #fff; }
+    .toast-warn { background: #78350F; border: 2px solid #F59E0B; color: #fff; }
+    .toast-err { background: #7F1D1D; border: 2px solid #EF4444; color: #fff; }
+
     /* Modals */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 99; align-items: center; justify-content: center; padding: 16px; }
     .modal-box { background: #111827; border: 1px solid #374151; border-radius: 14px; width: 100%; max-width: 480px; padding: 18px; max-height: 90vh; overflow-y: auto; }
     .btn-close { width: 100%; background: #1F2937; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; margin-top: 14px; cursor: pointer; }
     .btn-action { background: #00F2FE; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; }
-    .btn-action:hover { background: #38f9d7; }
+    .btn-action:hover { opacity: 0.9; }
     .hidden { display: none !important; }
-    textarea.zpl-code { width: 100%; height: 140px; background: #070B12; border: 1px solid #374151; color: #00F2FE; font-family: monospace; font-size: 11px; padding: 8px; border-radius: 6px; resize: vertical; outline: none; }
+    textarea.zpl-code { width: 100%; height: 130px; background: #070B12; border: 1px solid #374151; color: #00F2FE; font-family: monospace; font-size: 11px; padding: 8px; border-radius: 6px; resize: vertical; outline: none; }
   </style>
 </head>
 <body>
 
+  <!-- Zwevende Toast Melding voor handsfree scannen -->
+  <div id="toast"></div>
+
   <header>
     <div>
-      <span class="neon-cyan" style="font-weight: 900; font-size: 18px; letter-spacing: 1px;">GIGMATE</span>
-      <span class="neon-magenta" style="font-size: 10px; font-weight: bold; margin-left: 6px;">CLOUD</span>
+      <span class="neon-cyan" style="font-weight: 900; font-size: 19px; letter-spacing: 1px;">GIGMATE</span>
+      <span class="neon-magenta" style="font-size: 10px; font-weight: bold; margin-left: 6px; padding: 2px 6px; background: rgba(255,0,127,0.15); border-radius: 4px;">PRO CLOUD</span>
     </div>
-    <div class="status-badge">
-      <span id="conn-dot" class="dot"></span>
-      <span id="conn-text">Verbinden...</span>
+    <div class="status-group">
+      <div class="status-badge">
+        <span id="conn-dot" class="dot"></span>
+        <span id="conn-text">Verbinden...</span>
+      </div>
+      <div class="status-badge" title="USB / Bluetooth Handscanner gereed">
+        <span class="dot green"></span>
+        <span>Scanner Actief</span>
+      </div>
     </div>
   </header>
 
   <!-- Navigatietabs -->
   <nav>
-    <button type="button" id="btn-inventory" class="tab-btn active" onclick="switchTab('inventory')">Voorraad (<span id="c-gear">0</span>)</button>
-    <button type="button" id="btn-locations" class="tab-btn" onclick="switchTab('locations')">Kratten & Locaties</button>
-    <button type="button" id="btn-projects" class="tab-btn" onclick="switchTab('projects')">Gigs (<span id="c-proj">0</span>)</button>
+    <button type="button" id="btn-inventory" class="tab-btn active" onclick="switchTab('inventory')">📦 Voorraad (<span id="c-gear">0</span>)</button>
+    <button type="button" id="btn-locations" class="tab-btn" onclick="switchTab('locations')">🗄️ Kratten & Locaties</button>
+    <button type="button" id="btn-projects" class="tab-btn" onclick="switchTab('projects')">📅 Gigs & Load-In (<span id="c-proj">0</span>)</button>
   </nav>
 
   <main>
     <!-- TAB 1: VOORRAAD -->
     <div id="tab-inventory-content">
-      <input type="text" id="search-box" class="search-input" placeholder="🔍 Zoek artikel, barcode of krat..." oninput="renderGear()">
+      <input type="text" id="search-box" class="search-input" placeholder="🔍 Zoek artikel op naam, barcode, categorie of krat..." oninput="renderGear()">
       <div class="card" style="padding: 0; overflow-x: auto;">
         <table>
           <thead>
             <tr>
               <th>Foto</th>
-              <th>Code</th>
+              <th>Barcode</th>
               <th>Naam</th>
-              <th>Krat</th>
+              <th>Categorie</th>
+              <th>Vaste Locatie</th>
               <th style="text-align:center;">Aantal</th>
             </tr>
           </thead>
           <tbody id="gear-body">
-            <tr><td colspan="5" style="text-align:center; padding: 24px; color: #64748B;">Laden uit cloud...</td></tr>
+            <tr><td colspan="6" style="text-align:center; padding: 24px; color: #64748B;">Laden uit cloud...</td></tr>
           </tbody>
         </table>
       </div>
@@ -98,7 +138,7 @@
       </div>
     </div>
 
-    <!-- TAB 3: PROJECTEN -->
+    <!-- TAB 3: PROJECTEN & LOAD-IN/OUT -->
     <div id="tab-projects-content" class="hidden">
       <div id="proj-container">
         <div style="color:#64748B; padding:12px;">Projecten laden...</div>
@@ -109,15 +149,16 @@
   <!-- MODAL 1: ARTIKEL DETAILS -->
   <div id="modal" class="modal-overlay" onclick="closeModal()">
     <div class="modal-box" onclick="event.stopPropagation()">
-      <div id="modal-img-wrap" style="text-align:center; margin-bottom:12px; background:#000; padding:6px; border-radius:8px;">
-        <img id="modal-img" src="" style="max-height:220px; max-width:100%; object-fit:contain;">
+      <div id="modal-img-wrap" style="text-align:center; margin-bottom:12px; background:#000; padding:6px; border-radius:8px; border:1px solid #1F2937;">
+        <img id="modal-img" src="" style="max-height:240px; max-width:100%; object-fit:contain;">
       </div>
-      <h2 id="modal-title" style="font-size:18px; font-weight:bold; color:#fff; margin-bottom:8px;"></h2>
-      <div style="font-size:13px; line-height:1.8; color:#CBD5E1;">
-        <div>Barcode: <b id="modal-code" class="neon-cyan" style="font-family:monospace;"></b></div>
-        <div>Krat: <span id="modal-loc" class="badge-crate"></span></div>
-        <div>Aantal: <b id="modal-qty"></b></div>
-        <div style="margin-top:6px; font-size:12px; color:#94A3B8; font-style:italic;" id="modal-desc"></div>
+      <h2 id="modal-title" style="font-size:19px; font-weight:bold; color:#fff; margin-bottom:10px;"></h2>
+      <div style="font-size:13px; line-height:1.9; color:#CBD5E1;">
+        <div>Barcode / QR: <b id="modal-code" class="neon-cyan" style="font-family:monospace;"></b></div>
+        <div>Categorie: <span id="modal-cat" class="badge-cat"></span></div>
+        <div>Vaste Kratlocatie: <span id="modal-loc" class="badge-crate"></span></div>
+        <div>Totale Voorraad: <b id="modal-qty"></b></div>
+        <div style="margin-top:8px; padding-top:8px; border-top:1px solid #1F2937; font-size:12px; color:#94A3B8; font-style:italic;" id="modal-desc"></div>
       </div>
       <button type="button" class="btn-close" onclick="closeModal()">Sluiten</button>
     </div>
@@ -126,21 +167,22 @@
   <!-- MODAL 2: ZPL KRATLABEL GENERATOR -->
   <div id="zpl-modal" class="modal-overlay" onclick="closeZplModal()">
     <div class="modal-box" onclick="event.stopPropagation()">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <h2 id="zpl-modal-title" style="font-size:17px; font-weight:bold; color:#00F2FE;">Zebra Kratlabel (102x150mm)</h2>
         <span style="font-size:11px; background:#1F2937; padding:2px 6px; border-radius:4px; color:#aaa;">203 DPI</span>
       </div>
       
       <p style="font-size:12px; color:#94A3B8; margin-bottom:8px;">
-        Gereed voor thermische Zebra printers (ZPL II formaat):
+        Thermische ZPL II code voor Zebra 102 x 150 mm verzend-/kratlabels:
       </p>
 
       <textarea id="zpl-output" class="zpl-code" readonly></textarea>
 
       <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+        <button type="button" class="btn-action" style="background:#10B981; color:#000;" onclick="directPrintZpl()">🖨️ Direct Printen</button>
         <button type="button" class="btn-action" onclick="copyZplCode()">📋 Kopieer ZPL</button>
         <button type="button" class="btn-action" style="background:#FF007F; color:#fff;" onclick="downloadZplFile()">💾 Download .ZPL</button>
-        <button type="button" class="btn-action" style="background:#1E293B; color:#00F2FE; border:1px solid #00F2FE;" onclick="previewZplLabel()">👁️ Bekijk Voorbeeld</button>
+        <button type="button" class="btn-action" style="background:#1E293B; color:#00F2FE; border:1px solid #00F2FE;" onclick="previewZplLabel()">👁️ Voorbeeld</button>
       </div>
 
       <div id="zpl-preview-wrap" style="display:none; margin-top:12px; text-align:center; background:#000; padding:8px; border-radius:8px;">
@@ -156,8 +198,64 @@
     var allGear = [];
     var allProjects = [];
     var currentZplCrate = "";
+    var activeProjectScan = { projectId: null, mode: null };
+    var lastDataHash = "";
 
-    // 1. Tabwisselaar
+    // --- 1. AUDIO FEEDBACK GENERATOR (Web Audio API) ---
+    var audioCtx = null;
+    function playBeep(type) {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        var now = audioCtx.currentTime;
+        if (type === "ok") {
+          // Korte hoge piep (1200 Hz)
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(1200, now);
+          gain.gain.setValueAtTime(0.15, now);
+          osc.start(now);
+          osc.stop(now + 0.1);
+        } else if (type === "new") {
+          // Dubbele oplopende piep (900 -> 1400 Hz)
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(900, now);
+          osc.frequency.setValueAtTime(1400, now + 0.08);
+          gain.gain.setValueAtTime(0.15, now);
+          osc.start(now);
+          osc.stop(now + 0.18);
+        } else if (type === "err") {
+          // Lage fout-zoemer (220 Hz zaagtand)
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(220, now);
+          gain.gain.setValueAtTime(0.2, now);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        }
+      } catch (e) {
+        console.warn("Audio niet ondersteund:", e);
+      }
+    }
+
+    // --- 2. TOAST MELDINGEN (Handsfree feedback) ---
+    var toastTimer = null;
+    function showToast(msg, level) {
+      var t = document.getElementById("toast");
+      t.textContent = msg;
+      t.className = level === "err" ? "toast-err" : (level === "warn" ? "toast-warn" : "toast-ok");
+      t.style.display = "block";
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(function() {
+        t.style.display = "none";
+      }, 3200);
+    }
+
+    // --- 3. TABWISSELAAR ---
     function switchTab(name) {
       document.getElementById('tab-inventory-content').classList.add('hidden');
       document.getElementById('tab-locations-content').classList.add('hidden');
@@ -171,11 +269,16 @@
       document.getElementById('btn-' + name).classList.add('active');
     }
 
-    // 2. Data ophalen via JSONP
+    // --- 4. CLOUD SYNCHRONISATIE (JSONP) ---
     window.onCloudDataLoaded = function(data) {
       document.getElementById('conn-dot').className = "dot green";
       document.getElementById('conn-text').textContent = "Online";
       document.getElementById('conn-text').style.color = "#10B981";
+
+      // Controleer of de data echt veranderd is (voorkomt onnodig hertekenen en flikkeren)
+      var currentHash = JSON.stringify(data || {});
+      if (currentHash === lastDataHash) return;
+      lastDataHash = currentHash;
 
       allGear = [];
       if (data && data.gear_items) {
@@ -192,7 +295,12 @@
         allProjects = Array.isArray(p) ? p.filter(Boolean) : Object.values(p);
       }
       document.getElementById('c-proj').textContent = allProjects.length;
-      renderProjects();
+
+      // Als de gebruiker net een barcode aan het typen is in het handmatige veld, breek het typen niet af
+      var activeEl = document.activeElement;
+      if (!activeEl || activeEl.id !== "manual-scan-input" || activeEl.value === "") {
+        renderProjects();
+      }
     };
 
     function fetchCloud() {
@@ -213,7 +321,7 @@
     fetchCloud();
     setInterval(fetchCloud, 3000);
 
-    // 3. Render Voorraad
+    // --- 5. RENDER VOORRAAD ---
     function renderGear() {
       var q = (document.getElementById('search-box').value || "").toLowerCase();
       var tbody = document.getElementById('gear-body');
@@ -221,11 +329,12 @@
       var filtered = allGear.filter(function(i) {
         return (i.name || "").toLowerCase().indexOf(q) > -1 ||
                (i.qrCode || "").toLowerCase().indexOf(q) > -1 ||
+               (i.category || "").toLowerCase().indexOf(q) > -1 ||
                (i.defaultLocation || "").toLowerCase().indexOf(q) > -1;
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#64748B;">Geen artikelen gevonden</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:#64748B;">Geen artikelen gevonden</td></tr>';
         return;
       }
 
@@ -236,10 +345,11 @@
           ? '<img src="' + item.photoUri + '" class="img-thumb">' 
           : '<div class="no-img">Geen</div>';
 
-        html += '<tr onclick="openModal(\'' + encodeURIComponent(item.qrCode || '') + '\')">' +
+        html += '<tr class="clickable-row" onclick="openModal(\'' + encodeURIComponent(item.qrCode || '') + '\')">' +
                   '<td>' + imgTag + '</td>' +
                   '<td class="neon-cyan" style="font-family:monospace; font-weight:bold;">' + (item.qrCode || '-') + '</td>' +
                   '<td style="font-weight:bold; color:#fff;">' + (item.name || '-') + '</td>' +
+                  '<td><span class="badge-cat">' + (item.category || '-') + '</span></td>' +
                   '<td><span class="badge-crate">📦 ' + (item.defaultLocation || '-') + '</span></td>' +
                   '<td style="text-align:center; font-weight:bold;">' + (item.quantity || 1) + '</td>' +
                 '</tr>';
@@ -247,7 +357,7 @@
       tbody.innerHTML = html;
     }
 
-    // 4. Render Kratten & Locaties (inclusief ZPL-printknop)
+    // --- 6. RENDER KRATTEN & LOCATIES ---
     function renderLocations() {
       var grid = document.getElementById('loc-grid');
       var byLoc = {};
@@ -278,7 +388,7 @@
         for (var k = 0; k < items.length; k++) {
           var it = items[k];
           html += '<div class="loc-item" onclick="openModal(\'' + encodeURIComponent(it.qrCode || '') + '\')">' +
-                    '<span style="color:#fff;">' + it.name + '</span>' +
+                    '<span style="color:#fff;">' + it.name + ' <small style="color:#64748B; font-family:monospace;">[' + (it.qrCode || '') + ']</small></span>' +
                     '<span class="neon-cyan" style="font-weight:bold;">' + (it.quantity || 1) + 'x</span>' +
                   '</div>';
         }
@@ -287,7 +397,7 @@
       grid.innerHTML = html;
     }
 
-    // 5. Render Projecten
+    // --- 7. RENDER PROJECTEN & LOAD-IN / LOAD-OUT ---
     function renderProjects() {
       var cont = document.getElementById('proj-container');
       if (allProjects.length === 0) {
@@ -299,59 +409,215 @@
       for (var i = 0; i < allProjects.length; i++) {
         var p = allProjects[i];
         var pItems = p.items ? (Array.isArray(p.items) ? p.items.filter(Boolean) : Object.values(p.items)) : [];
-        
-        html += '<div class="card">' +
-                  '<h2 style="font-size:16px; font-weight:bold; color:#fff;">' + (p.name || 'Naamloos') + '</h2>' +
-                  '<div style="font-size:11px; color:#94A3B8; margin-top:2px; margin-bottom:10px;">📍 ' + (p.location || '-') + ' • 📅 ' + (p.date || '-') + '</div>';
+        var missing = pItems.filter(function(it) {
+          return (parseInt(it.loadedInCount) || 0) > (parseInt(it.loadedOutCount) || 0);
+        });
+
+        var isScanActive = (activeProjectScan.projectId == p.id);
+        var curMode = isScanActive ? activeProjectScan.mode : null;
+
+        html += '<div class="card ' + (isScanActive ? 'scan-active' : '') + '">' +
+                  '<div class="proj-header">' +
+                    '<div>' +
+                      '<h2 style="font-size:18px; font-weight:900; color:#fff;">' + (p.name || 'Naamloos evenement') + '</h2>' +
+                      '<div style="font-size:12px; color:#94A3B8; margin-top:3px;">📍 ' + (p.location || '-') + ' • 📅 ' + (p.date || '-') + '</div>' +
+                    '</div>' +
+                    '<div style="display:flex; gap:8px; flex-wrap:wrap;">' +
+                      '<button type="button" class="btn-mode btn-loadin ' + (curMode === 'LOAD_IN' ? 'active' : '') + '" onclick="setProjectScanMode(\'' + p.id + '\', \'LOAD_IN\')">⬇️ ' + (curMode === 'LOAD_IN' ? 'LOAD-IN ACTIEF' : 'START LOAD-IN') + '</button>' +
+                      '<button type="button" class="btn-mode btn-loadout ' + (curMode === 'LOAD_OUT' ? 'active' : '') + '" onclick="setProjectScanMode(\'' + p.id + '\', \'LOAD_OUT\')">⬆️ ' + (curMode === 'LOAD_OUT' ? 'LOAD-OUT ACTIEF' : 'START LOAD-OUT') + '</button>' +
+                      (isScanActive ? '<button type="button" class="btn-stop" onclick="stopProjectScan()">Stoppen</button>' : '') +
+                    '</div>' +
+                  '</div>';
+
+        // Invoerbalk wanneer scannen actief is
+        if (isScanActive) {
+          html += '<div class="scan-bar">' +
+                    '<div style="font-size:12px; font-weight:bold; color:#00F2FE;">📡 Scan met handscanner of typ code voor ' + (curMode === 'LOAD_IN' ? 'LOAD-IN (Uitgeven)' : 'LOAD-OUT (Terug in krat)') + ':</div>' +
+                    '<div class="scan-input-group">' +
+                      '<input type="text" id="manual-scan-input" class="scan-input" placeholder="Typ barcode & Enter..." onkeydown="if(event.key===\'Enter\') submitManualScan(\'' + p.id + '\')">' +
+                      '<button type="button" class="btn-action" onclick="submitManualScan(\'' + p.id + '\')">Scan</button>' +
+                    '</div>' +
+                  '</div>';
+        }
+
+        // Statusbalk compleetheid
+        if (missing.length > 0) {
+          html += '<div class="alert-missing">⚠️ Let op: nog ' + missing.length + ' artikel(en) uitgeladen en nog niet terug in het krat!</div>';
+        } else if (pItems.length > 0) {
+          html += '<div class="alert-complete">✅ Alle ingeladen artikelen zijn weer veilig terug in de kratten.</div>';
+        }
 
         if (pItems.length > 0) {
-          html += '<table><thead><tr><th>Apparaat</th><th>Krat</th><th style="text-align:center;">In</th><th style="text-align:center;">Uit</th></tr></thead><tbody>';
+          html += '<div style="overflow-x:auto;"><table><thead><tr><th>Apparaat</th><th>Krat</th><th style="text-align:center;">Nodig</th><th style="text-align:center;">Load-In</th><th style="text-align:center;">Load-Out</th><th style="text-align:center;">Status</th></tr></thead><tbody>';
           for (var j = 0; j < pItems.length; j++) {
             var item = pItems[j];
-            html += '<tr>' +
+            var req = parseInt(item.requiredCount) || 1;
+            var inC = parseInt(item.loadedInCount) || 0;
+            var outC = parseInt(item.loadedOutCount) || 0;
+            var isDone = (inC >= req) && (outC >= inC);
+
+            html += '<tr class="clickable-row" onclick="openModal(\'' + encodeURIComponent(item.gearQr || '') + '\')">' +
                       '<td style="color:#fff; font-weight:bold;">' + (item.gearName || item.gearQr) + '</td>' +
                       '<td><span class="badge-crate">📦 ' + (item.defaultLocation || '-') + '</span></td>' +
-                      '<td style="text-align:center; color:#00F2FE; font-weight:bold;">' + (item.loadedInCount || 0) + '/' + (item.requiredCount || 1) + '</td>' +
-                      '<td style="text-align:center; color:#FF007F; font-weight:bold;">' + (item.loadedOutCount || 0) + '</td>' +
+                      '<td style="text-align:center; font-weight:bold; color:#CBD5E1;">' + req + '</td>' +
+                      '<td style="text-align:center; color:#00F2FE; font-weight:bold;">' + inC + '/' + req + '</td>' +
+                      '<td style="text-align:center; color:#FF007F; font-weight:bold;">' + outC + '/' + inC + '</td>' +
+                      '<td style="text-align:center;">' +
+                        (isDone 
+                          ? '<span style="background:#064E3B; color:#6EE7B7; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">Compleet</span>'
+                          : '<span style="background:#78350F; color:#FCD34D; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">Actief</span>') +
+                      '</td>' +
                     '</tr>';
           }
-          html += '</tbody></table>';
+          html += '</tbody></table></div>';
         } else {
-          html += '<div style="font-size:12px; color:#64748B; font-style:italic;">Geen artikelen toegevoegd.</div>';
+          html += '<div style="font-size:12px; color:#64748B; font-style:italic;">Nog geen artikelen gekoppeld. Start Load-In om direct artikelen te scannen.</div>';
         }
         html += '</div>';
       }
       cont.innerHTML = html;
+
+      if (activeProjectScan.projectId) {
+        var inp = document.getElementById("manual-scan-input");
+        if (inp) inp.focus();
+      }
     }
 
-    // 6. ZPL Label Generator (102 x 150 mm / 203 DPI = 812 x 1218 dots)
+    // --- 8. LOAD-IN / LOAD-OUT VERWERKING ---
+    function setProjectScanMode(projectId, mode) {
+      if (activeProjectScan.projectId == projectId && activeProjectScan.mode === mode) {
+        stopProjectScan();
+      } else {
+        activeProjectScan = { projectId: projectId, mode: mode };
+        renderProjects();
+      }
+    }
+
+    function stopProjectScan() {
+      activeProjectScan = { projectId: null, mode: null };
+      renderProjects();
+    }
+
+    function submitManualScan(projectId) {
+      var input = document.getElementById("manual-scan-input");
+      if (!input) return;
+      var code = input.value.trim();
+      if (!code) return;
+      input.value = "";
+      processProjectBarcodeScan(projectId, activeProjectScan.mode, code);
+    }
+
+    async function processProjectBarcodeScan(projectId, mode, code) {
+      var proj = allProjects.find(function(p) { return p.id == projectId; });
+      if (!proj) return;
+
+      // Zoek in de voorraad
+      var gearInfo = allGear.find(function(g) {
+        return (g.qrCode || "").trim().toLowerCase() === code.trim().toLowerCase();
+      });
+
+      if (!gearInfo) {
+        playBeep("err");
+        showToast('❌ Barcode "' + code + '" bestaat niet in je voorraad!', "err");
+        return;
+      }
+
+      var items = proj.items ? (Array.isArray(proj.items) ? proj.items.filter(Boolean) : Object.values(proj.items)) : [];
+      var entryIndex = items.findIndex(function(i) {
+        return (i.gearQr || "").trim().toLowerCase() === code.trim().toLowerCase();
+      });
+
+      if (mode === "LOAD_IN") {
+        if (entryIndex !== -1) {
+          var entry = items[entryIndex];
+          var curIn = parseInt(entry.loadedInCount) || 0;
+          var req = parseInt(entry.requiredCount) || 1;
+          var maxStock = parseInt(gearInfo.quantity) || 99;
+
+          if (curIn < req) {
+            entry.loadedInCount = curIn + 1;
+            playBeep("ok");
+            showToast('✅ Ingeladen: ' + entry.gearName + ' (' + entry.loadedInCount + '/' + req + ')', "ok");
+          } else if (curIn < maxStock) {
+            entry.requiredCount = req + 1;
+            entry.loadedInCount = curIn + 1;
+            playBeep("new");
+            showToast('➕ Extra exemplaar ingeladen: ' + entry.gearName + ' (' + entry.loadedInCount + '/' + maxStock + ')', "ok");
+          } else {
+            playBeep("err");
+            showToast('⚠️ Alle ' + maxStock + ' stuks van "' + entry.gearName + '" uit voorraad zijn al ingeladen!', "warn");
+            return;
+          }
+        } else {
+          items.push({
+            gearQr: gearInfo.qrCode,
+            gearName: gearInfo.name,
+            defaultLocation: gearInfo.defaultLocation,
+            category: gearInfo.category,
+            photoUri: gearInfo.photoUri || null,
+            requiredCount: 1,
+            loadedInCount: 1,
+            loadedOutCount: 0
+          });
+          playBeep("new");
+          showToast('➕ Nieuw toegevoegd aan project: ' + gearInfo.name, "ok");
+        }
+      } else if (mode === "LOAD_OUT") {
+        if (entryIndex === -1) {
+          playBeep("err");
+          showToast('❌ "' + gearInfo.name + '" hoort niet bij dit evenement!', "err");
+          return;
+        }
+        var outEntry = items[entryIndex];
+        var inC = parseInt(outEntry.loadedInCount) || 0;
+        var outC = parseInt(outEntry.loadedOutCount) || 0;
+
+        if (inC === 0) {
+          playBeep("err");
+          showToast('⚠️ "' + outEntry.gearName + '" was nog niet ingeladen bij opbouw!', "warn");
+          return;
+        } else if (outC >= inC) {
+          playBeep("err");
+          showToast('⚠️ Alle stuks van "' + outEntry.gearName + '" zitten al in ' + (outEntry.defaultLocation || 'het krat') + '!', "warn");
+          return;
+        } else {
+          outEntry.loadedOutCount = outC + 1;
+          playBeep("ok");
+          showToast('📦 Inpakken in [' + (outEntry.defaultLocation || 'Krat') + ']: ' + outEntry.gearName + ' (' + outEntry.loadedOutCount + '/' + inC + ')', "ok");
+        }
+      }
+
+      proj.items = items;
+      lastDataHash = ""; // Forceer UI verversing
+      renderProjects();
+
+      try {
+        await fetch(DB_BASE + "/projects/" + projectId + ".json", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(proj)
+        });
+        fetchCloud();
+      } catch (e) {
+        playBeep("err");
+        showToast("❌ Fout bij opslaan naar cloud!", "err");
+      }
+    }
+
+    // --- 9. ZPL KRATLABEL GENERATOR & DIRECT PRINTEN ---
     function generateZpl(locName, items) {
       var barcodeData = locName.toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
       if (!barcodeData) barcodeData = "KRAT";
 
-      var z = "^XA\n";
-      z += "^PW812\n";
-      z += "^LL1218\n";
-      
-      // Buitenkader
+      var z = "^XA\n^PW812\n^LL1218\n^CI28\n";
       z += "^FO40,40^GB732,1138,4^FS\n";
-      
-      // Header
       z += "^FO70,70^A0N,50,50^FDGIGMATE INVENTORY^FS\n";
       z += "^FO70,130^GB672,3,3^FS\n";
-      
-      // Kratnaam groot
       z += "^FO70,160^A0N,75,75^FDKRAT: " + locName.toUpperCase() + "^FS\n";
-      
-      // Barcode (Code 128)
-      z += "^FO70,260^BY3,3,90\n";
-      z += "^BCN,90,Y,N,N\n";
-      z += "^FD" + barcodeData + "^FS\n";
-      
+      z += "^FO70,260^BY3,3,90\n^BCN,90,Y,N,N\n^FD" + barcodeData + "^FS\n";
       z += "^FO70,410^GB672,2,2^FS\n";
-      z += "^FO70,430^A0N,32,32^FDVASTE APPARATUUR (" + items.length + " TYPE ITEMS):^FS\n";
+      z += "^FO70,430^A0N,32,32^FDVASTE INHOUD (" + items.length + " ARTIKELEN):^FS\n";
       
-      // Items opsommen
       var y = 480;
       var maxItems = Math.min(items.length, 12);
       for (var i = 0; i < maxItems; i++) {
@@ -360,7 +626,7 @@
         var qrClean = (it.qrCode || "").substring(0, 10);
         var qty = it.quantity || 1;
         
-        z += "^FO70," + y + "^A0N,28,28^FD• [" + qrClean + "] " + nameClean + "^FS\n";
+        z += "^FO70," + y + "^A0N,28,28^FD- [" + qrClean + "] " + nameClean + "^FS\n";
         z += "^FO680," + y + "^A0N,28,28^FD" + qty + "x^FS\n";
         y += 44;
       }
@@ -369,7 +635,6 @@
         z += "^FO70," + y + "^A0N,24,24^FD... en nog " + (items.length - 12) + " extra artikel(en)^FS\n";
       }
       
-      // Footer
       z += "^FO70,1110^A0N,22,22^FDGIGMATE STAGE GEAR • PRINTDATUM: " + new Date().toLocaleDateString('nl-NL') + "^FS\n";
       z += "^XZ\n";
       return z;
@@ -398,7 +663,7 @@
       var textarea = document.getElementById('zpl-output');
       textarea.select();
       document.execCommand('copy');
-      alert('✅ ZPL-code gekopieerd naar klembord!');
+      showToast('📋 ZPL-code gekopieerd naar klembord!', 'ok');
     }
 
     function downloadZplFile() {
@@ -418,14 +683,29 @@
       var zpl = document.getElementById('zpl-output').value;
       var wrap = document.getElementById('zpl-preview-wrap');
       var img = document.getElementById('zpl-preview-img');
-      
-      // Labelary REST API (4x6 inch, 8dpmm = 203 DPI)
       var url = "https://api.labelary.com/v1/printers/8dpmm/labels/4x6/0/" + encodeURIComponent(zpl);
       img.src = url;
       wrap.style.display = 'block';
     }
 
-    // 7. Modal Details Popups
+    function directPrintZpl() {
+      var zpl = document.getElementById('zpl-output').value;
+      var imgUrl = "https://api.labelary.com/v1/printers/8dpmm/labels/4x6/0/" + encodeURIComponent(zpl);
+
+      var printWindow = window.open('', '_blank', 'width=600,height=800');
+      if (!printWindow) {
+        showToast("⚠️ Pop-up geblokkeerd! Sta pop-ups toe voor deze site.", "warn");
+        return;
+      }
+      printWindow.document.write('<!DOCTYPE html><html><head><title>Print Label - ' + currentZplCrate + '</title>');
+      printWindow.document.write('<style>@page { size: 102mm 152mm; margin: 0; } body { margin: 0; display: flex; justify-content: center; align-items: center; background: #fff; } img { width: 100%; height: auto; max-height: 100vh; object-fit: contain; }</style>');
+      printWindow.document.write('</head><body>');
+      printWindow.document.write('<img src="' + imgUrl + '" onload="setTimeout(function(){ window.print(); window.close(); }, 250);" />');
+      printWindow.document.write('</body></html>');
+      printWindow.document.close();
+    }
+
+    // --- 10. MODAL ARTIKEL DETAILS ---
     function openModal(encCode) {
       var code = decodeURIComponent(encCode);
       var item = allGear.find(function(g) { return (g.qrCode || "").toLowerCase() === code.toLowerCase(); });
@@ -433,9 +713,10 @@
 
       document.getElementById('modal-title').textContent = item.name || 'Artikel';
       document.getElementById('modal-code').textContent = item.qrCode || '-';
+      document.getElementById('modal-cat').textContent = item.category || '-';
       document.getElementById('modal-loc').textContent = '📦 ' + (item.defaultLocation || '-');
       document.getElementById('modal-qty').textContent = (item.quantity || 1) + ' stuk(s)';
-      document.getElementById('modal-desc').textContent = item.description || 'Geen opmerkingen.';
+      document.getElementById('modal-desc').textContent = item.description || 'Geen extra opmerkingen.';
 
       var imgWrap = document.getElementById('modal-img-wrap');
       var img = document.getElementById('modal-img');
@@ -452,6 +733,51 @@
     function closeModal() {
       document.getElementById('modal').style.display = 'none';
     }
+
+    // --- 11. USB / BLUETOOTH HANDSCANNER LISTENER ---
+    var scanBuffer = "";
+    var lastKeyTime = Date.now();
+
+    window.addEventListener("keydown", function(e) {
+      if (e.key === "Escape") {
+        closeModal();
+        closeZplModal();
+      }
+
+      // Negeer als de gebruiker zelf typt in een zoek- of invoerveld
+      var activeEl = document.activeElement;
+      if (activeEl && (activeEl.id === "search-box" || activeEl.id === "manual-scan-input")) {
+        return;
+      }
+
+      var now = Date.now();
+      if (now - lastKeyTime > 120) {
+        scanBuffer = "";
+      }
+      lastKeyTime = now;
+
+      if (e.key === "Enter") {
+        var code = scanBuffer.trim();
+        if (code.length > 0) {
+          if (activeProjectScan.projectId && activeProjectScan.mode) {
+            processProjectBarcodeScan(activeProjectScan.projectId, activeProjectScan.mode, code);
+          } else {
+            // Als we niet in een project aan het laden zijn, open direct de artikel-popup!
+            var found = allGear.find(function(g) { return (g.qrCode || "").toLowerCase() === code.toLowerCase(); });
+            if (found) {
+              playBeep("ok");
+              openModal(encodeURIComponent(found.qrCode));
+            } else {
+              playBeep("err");
+              showToast('❌ Gezochte barcode "' + code + '" niet gevonden', 'err');
+            }
+          }
+        }
+        scanBuffer = "";
+      } else if (e.key.length === 1) {
+        scanBuffer += e.key;
+      }
+    });
   </script>
 </body>
 </html>
