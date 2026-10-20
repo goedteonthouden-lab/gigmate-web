@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Gigmate Web • Live Dashboard</title>
+  <!-- Officiële Firebase SDK's voor Echte Database Authenticatie & Realtime Sync -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background-color: #070B12; color: #E2E8F0; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; padding-bottom: 60px; }
@@ -11,10 +15,13 @@
     .neon-cyan { color: #00F2FE; }
     .neon-magenta { color: #FF007F; }
     
-    .status-group { display: flex; align-items: center; gap: 8px; }
+    .status-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .status-badge { background: #111827; border: 1px solid #1F2937; border-radius: 20px; padding: 5px 12px; font-size: 11px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+    .btn-settings { background: #1E293B; border: 1px solid #374151; color: #E2E8F0; border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+    .btn-settings:hover { border-color: #00F2FE; color: #00F2FE; }
     .dot { width: 8px; height: 8px; border-radius: 50%; background: #F59E0B; display: inline-block; }
     .dot.green { background: #10B981; box-shadow: 0 0 8px #10B981; }
+    .dot.red { background: #EF4444; box-shadow: 0 0 8px #EF4444; }
     
     nav { background: #090F1C; border-bottom: 1px solid #1F2937; display: flex; overflow-x: auto; padding: 0 12px; gap: 8px; }
     .tab-btn { background: none; border: none; border-bottom: 3px solid transparent; color: #94A3B8; font-weight: 700; font-size: 13px; padding: 12px 14px; cursor: pointer; white-space: nowrap; }
@@ -77,6 +84,8 @@
     .btn-close { width: 100%; background: #1F2937; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; margin-top: 10px; cursor: pointer; }
     .btn-action { background: #00F2FE; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; }
     .btn-action:hover { opacity: 0.9; }
+    .form-input { width: 100%; background: #070B12; border: 1px solid #374151; color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-top: 4px; margin-bottom: 12px; outline: none; }
+    .form-input:focus { border-color: #00F2FE; }
     .hidden { display: none !important; }
     textarea.zpl-code { width: 100%; height: 130px; background: #070B12; border: 1px solid #374151; color: #00F2FE; font-family: monospace; font-size: 11px; padding: 8px; border-radius: 6px; resize: vertical; outline: none; }
   </style>
@@ -100,6 +109,9 @@
         <span class="dot green"></span>
         <span>Scanner Actief</span>
       </div>
+      <button type="button" class="btn-settings" onclick="openAuthModal()">
+        ⚙️ <span id="auth-btn-label">Cloud Login</span>
+      </button>
     </div>
   </header>
 
@@ -113,7 +125,7 @@
   <main>
     <!-- TAB 1: VOORRAAD -->
     <div id="tab-inventory-content">
-      <input type="text" id="search-box" class="search-input" placeholder="🔍 Zoek artikel op naam, barcode, categorie of krat..." oninput="renderGear()">
+      <input type="text" id="search-box" class="search-input" placeholder="🔍 Zoek artikel op naam, barcode, categorie of kratnummer (bijv. Krat 7 of 7)..." oninput="renderGear()">
       <div class="card" style="padding: 0; overflow-x: auto;">
         <table>
           <thead>
@@ -196,8 +208,50 @@
     </div>
   </div>
 
+  <!-- MODAL 3: DATABASE INLOG & BEVEILIGINGSINSTELLINGEN -->
+  <div id="auth-modal" class="modal-overlay" onclick="closeAuthModal()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <h2 style="font-size:18px; font-weight:bold; color:#00F2FE; margin-bottom:6px;">🔐 Cloud Database Inloggegevens</h2>
+      <p style="font-size:12px; color:#94A3B8; margin-bottom:14px;">
+        Vul hier hetzelfde e-mailadres en wachtwoord in als in het instellingenscherm van je Gigmate Android-app om toegang te krijgen tot de beveiligde Firebase-database.
+      </p>
+
+      <div id="auth-status-box" style="padding:10px; border-radius:8px; background:#070B12; border:1px solid #1F2937; margin-bottom:14px; font-size:12px;">
+        Status: <b id="auth-current-user" style="color:#F59E0B;">Niet ingelogd (Open modus)</b>
+      </div>
+
+      <label style="font-size:12px; color:#CBD5E1; font-weight:bold;">E-mailadres (Firebase Auth)</label>
+      <input type="email" id="auth-email" class="form-input" placeholder="bijv. arjan@gigmate.nl">
+
+      <label style="font-size:12px; color:#CBD5E1; font-weight:bold;">Wachtwoord</label>
+      <input type="password" id="auth-pass" class="form-input" placeholder="••••••••" onkeydown="if(event.key==='Enter') loginFirebaseWeb()">
+
+      <div id="auth-error-msg" style="color:#EF4444; font-size:12px; margin-bottom:10px; display:none; font-weight:bold;"></div>
+
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn-action" style="flex:1; padding:10px;" onclick="loginFirebaseWeb()">Inloggen & Opslaan</button>
+        <button type="button" class="btn-action" style="background:#7F1D1D; color:#fff; padding:10px;" onclick="logoutFirebaseWeb()">Uitloggen</button>
+      </div>
+
+      <button type="button" class="btn-close" onclick="closeAuthModal()">Sluiten</button>
+    </div>
+  </div>
+
   <script>
     var DB_BASE = "https://gigmate-5bcd7-default-rtdb.europe-west1.firebasedatabase.app";
+    var firebaseConfig = {
+      apiKey: "AIzaSyBXTBXgrnpU2C1fXDyhwPQiZkKySIbN0WM",
+      authDomain: "gigmate-5bcd7.firebaseapp.com",
+      projectId: "gigmate-5bcd7",
+      databaseURL: DB_BASE
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    var auth = firebase.auth();
+    var db = firebase.app().database(DB_BASE);
+
     var allGear = [];
     var allProjects = [];
     var currentZplName = "";
@@ -267,94 +321,179 @@
       document.getElementById('btn-' + name).classList.add('active');
     }
 
-    // --- 4. CLOUD SYNCHRONISATIE ---
-    window.onCloudDataLoaded = function(data) {
-      document.getElementById('conn-dot').className = "dot green";
-      document.getElementById('conn-text').textContent = "Online";
-      document.getElementById('conn-text').style.color = "#10B981";
-
-      var currentHash = JSON.stringify(data || {});
-      if (currentHash === lastDataHash) return;
-      lastDataHash = currentHash;
-
-      allGear = [];
-      if (data && data.gear_items) {
-        var g = data.gear_items;
-        allGear = Array.isArray(g) ? g.filter(Boolean) : Object.values(g);
+    // --- 4. BEVEILIGDE AUTHENTICATIE & CLOUD SYNC ---
+    auth.onAuthStateChanged(function(user) {
+      var statusEl = document.getElementById("auth-current-user");
+      var btnLabel = document.getElementById("auth-btn-label");
+      if (user && user.email) {
+        statusEl.textContent = "Ingelogd als " + user.email;
+        statusEl.style.color = "#10B981";
+        btnLabel.textContent = user.email.split("@")[0];
+      } else {
+        statusEl.textContent = "Niet ingelogd";
+        statusEl.style.color = "#F59E0B";
+        btnLabel.textContent = "Cloud Login";
       }
-      document.getElementById('c-gear').textContent = allGear.length;
-      renderGear();
-      renderLocations();
+      startRealtimeDatabaseListeners();
+    });
 
-      allProjects = [];
-      if (data && data.projects) {
-        var p = data.projects;
-        if (Array.isArray(p)) {
-          for (var i = 0; i < p.length; i++) {
-            if (p[i]) {
-              if (!p[i].id) p[i].id = i;
-              allProjects.push(p[i]);
+    function openAuthModal() {
+      var savedEmail = localStorage.getItem("gigmate_db_email") || "";
+      document.getElementById("auth-email").value = savedEmail;
+      document.getElementById("auth-error-msg").style.display = "none";
+      document.getElementById("auth-modal").style.display = "flex";
+    }
+
+    function closeAuthModal() {
+      document.getElementById("auth-modal").style.display = "none";
+    }
+
+    async function loginFirebaseWeb() {
+      var email = document.getElementById("auth-email").value.trim();
+      var pass = document.getElementById("auth-pass").value;
+      var errEl = document.getElementById("auth-error-msg");
+
+      if (!email || !pass) {
+        errEl.textContent = "Vul zowel een e-mailadres als wachtwoord in.";
+        errEl.style.display = "block";
+        return;
+      }
+
+      try {
+        await auth.signInWithEmailAndPassword(email, pass);
+        localStorage.setItem("gigmate_db_email", email);
+        errEl.style.display = "none";
+        closeAuthModal();
+        showToast("🔐 Succesvol ingelogd op de Cloud Database!", "ok");
+      } catch (e) {
+        errEl.textContent = "Inloggen mislukt: " + e.message;
+        errEl.style.display = "block";
+      }
+    }
+
+    async function logoutFirebaseWeb() {
+      await auth.signOut();
+      showToast("Uitgelogd van Cloud Database", "warn");
+      closeAuthModal();
+    }
+
+    function startRealtimeDatabaseListeners() {
+      db.ref(".info/connected").off();
+      db.ref(".info/connected").on("value", function(snap) {
+        if (snap.val() === true) {
+          document.getElementById('conn-dot').className = "dot green";
+          document.getElementById('conn-text').textContent = "Online";
+          document.getElementById('conn-text').style.color = "#10B981";
+        }
+      });
+
+      db.ref("gear_items").off();
+      db.ref("gear_items").on("value", function(snapshot) {
+        var g = snapshot.val();
+        allGear = [];
+        if (g) {
+          allGear = Array.isArray(g) ? g.filter(Boolean) : Object.values(g);
+        }
+        document.getElementById('c-gear').textContent = allGear.length;
+        renderGear();
+        renderLocations();
+      }, function(err) {
+        handlePermissionError(err);
+      });
+
+      db.ref("projects").off();
+      db.ref("projects").on("value", function(snapshot) {
+        var p = snapshot.val();
+        allProjects = [];
+        if (p) {
+          if (Array.isArray(p)) {
+            for (var i = 0; i < p.length; i++) {
+              if (p[i]) {
+                if (!p[i].id) p[i].id = i;
+                allProjects.push(p[i]);
+              }
             }
-          }
-        } else {
-          var keys = Object.keys(p);
-          for (var k = 0; k < keys.length; k++) {
-            var key = keys[k];
-            var projObj = p[key];
-            if (projObj && typeof projObj === "object") {
-              projObj._firebaseKey = key;
-              if (!projObj.id) projObj.id = key;
-              allProjects.push(projObj);
+          } else {
+            var keys = Object.keys(p);
+            for (var k = 0; k < keys.length; k++) {
+              var key = keys[k];
+              var projObj = p[key];
+              if (projObj && typeof projObj === "object") {
+                projObj._firebaseKey = key;
+                if (!projObj.id) projObj.id = key;
+                allProjects.push(projObj);
+              }
             }
           }
         }
-      }
-      // Sorteer nieuwste bovenaan
-      allProjects.sort(function(a, b) { return (b.id || 0) - (a.id || 0); });
-      document.getElementById('c-proj').textContent = allProjects.length;
+        allProjects.sort(function(a, b) { return (b.id || 0) - (a.id || 0); });
+        document.getElementById('c-proj').textContent = allProjects.length;
 
-      var activeEl = document.activeElement;
-      if (!activeEl || activeEl.id !== "manual-scan-input" || activeEl.value === "") {
-        renderProjects();
-      }
-    };
-
-    function fetchCloud() {
-      var old = document.getElementById("jsonp-script");
-      if (old) old.remove();
-
-      var script = document.createElement("script");
-      script.id = "jsonp-script";
-      script.src = DB_BASE + "/.json?callback=onCloudDataLoaded&_t=" + Date.now();
-      script.onerror = function() {
-        document.getElementById('conn-dot').className = "dot";
-        document.getElementById('conn-text').textContent = "Offline";
-        document.getElementById('conn-text').style.color = "#F59E0B";
-      };
-      document.body.appendChild(script);
+        var activeEl = document.activeElement;
+        if (!activeEl || activeEl.id !== "manual-scan-input" || activeEl.value === "") {
+          renderProjects();
+        }
+      }, function(err) {
+        handlePermissionError(err);
+      });
     }
 
-    fetchCloud();
-    setInterval(fetchCloud, 3000);
+    function handlePermissionError(err) {
+      console.warn("Firebase toegang geweigerd:", err);
+      document.getElementById('conn-dot').className = "dot red";
+      document.getElementById('conn-text').textContent = "Login Vereist";
+      document.getElementById('conn-text').style.color = "#EF4444";
+      openAuthModal();
+    }
 
-    // --- 5. RENDER VOORRAAD ---
+    // --- 5. RENDER VOORRAAD (MET SLIMME KRAT-ZOEKEN) ---
+    function isCrateMatch(locInDb, searchStr) {
+      var cleanLoc = (locInDb || "").trim().toLowerCase();
+      var cleanSearch = (searchStr || "").trim().toLowerCase();
+      if (!cleanLoc || !cleanSearch) return false;
+
+      var locNormalized = cleanLoc.replace(/[^a-z0-9]/g, "");
+      var searchNormalized = cleanSearch.replace(/[^a-z0-9]/g, "");
+
+      return cleanLoc.indexOf(cleanSearch) > -1 || 
+             (searchNormalized.length > 0 && locNormalized.indexOf(searchNormalized) > -1) ||
+             (cleanLoc === "krat " + cleanSearch);
+    }
+
     function renderGear() {
-      var q = (document.getElementById('search-box').value || "").toLowerCase();
+      var rawQuery = (document.getElementById('search-box').value || "").trim();
+      var q = rawQuery.toLowerCase();
       var tbody = document.getElementById('gear-body');
       
       var filtered = allGear.filter(function(i) {
+        if (!q) return true;
         return (i.name || "").toLowerCase().indexOf(q) > -1 ||
                (i.qrCode || "").toLowerCase().indexOf(q) > -1 ||
                (i.category || "").toLowerCase().indexOf(q) > -1 ||
-               (i.defaultLocation || "").toLowerCase().indexOf(q) > -1;
+               isCrateMatch(i.defaultLocation, q);
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:#64748B;">Geen artikelen gevonden</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:#64748B;">Geen artikelen gevonden voor "' + rawQuery + '"</td></tr>';
         return;
       }
 
       var html = "";
+      var allSameCrate = filtered.length > 0 && filtered.every(function(it) {
+        return (it.defaultLocation || "").trim().toLowerCase() === (filtered[0].defaultLocation || "").trim().toLowerCase();
+      });
+
+      if (rawQuery.length > 0 && allSameCrate) {
+        var crateTitle = filtered[0].defaultLocation || "Onbekend";
+        var totalPieces = filtered.reduce(function(sum, it) { return sum + (parseInt(it.quantity) || 1); }, 0);
+        html += '<tr style="background: rgba(0, 242, 254, 0.12);">' +
+                  '<td colspan="6" style="padding: 10px 12px; color: #00F2FE; font-weight: bold; font-size: 13px;">' +
+                    '📦 Inhoud van ' + crateTitle + ': ' + filtered.length + ' artikeltype(s) (' + totalPieces + ' stuks totaal) ' +
+                    '<button type="button" onclick="document.getElementById(\'search-box\').value=\'\'; renderGear();" style="float:right; background:#1E293B; color:#fff; border:1px solid #374151; padding:2px 8px; border-radius:4px; font-size:11px; cursor:pointer;">✖ Wis filter</button>' +
+                  '</td>' +
+                '</tr>';
+      }
+
       for (var i = 0; i < filtered.length; i++) {
         var item = filtered[i];
         var imgTag = item.photoUri 
@@ -504,16 +643,14 @@
       if (!confirm('Weet je zeker dat je evenement "' + name + '" definitief wilt verwijderen?')) return;
 
       try {
-        await fetch(DB_BASE + "/projects/" + projectKey + ".json", { method: "DELETE" });
-        lastDataHash = "";
-        fetchCloud();
+        await db.ref("projects/" + projectKey).remove();
         showToast('🗑️ Evenement "' + name + '" verwijderd!', 'ok');
       } catch (e) {
-        showToast('❌ Fout bij verwijderen evenement', 'err');
+        showToast('❌ Fout bij verwijderen: ' + e.message, 'err');
       }
     }
 
-    // --- 8. LOAD-IN / LOAD-OUT (INCLUSIEF SLIMME KRAT-SCAN!) ---
+    // --- 8. LOAD-IN / LOAD-OUT (INCLUSIEF SLIMME KRAT-SCAN) ---
     function setProjectScanMode(projectId, mode) {
       if (activeProjectScan.projectId == projectId && activeProjectScan.mode === mode) {
         stopProjectScan();
@@ -676,8 +813,6 @@
     }
 
     async function saveProjectToCloud(projectKey, proj) {
-      lastDataHash = "";
-      renderProjects();
       try {
         var cleanCopy = {
           id: Number(proj.id) || Date.now(),
@@ -686,19 +821,14 @@
           date: proj.date || "",
           items: proj.items || []
         };
-        await fetch(DB_BASE + "/projects/" + projectKey + ".json", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(cleanCopy)
-        });
-        fetchCloud();
+        await db.ref("projects/" + projectKey).set(cleanCopy);
       } catch (e) {
         playBeep("err");
-        showToast("❌ Fout bij opslaan naar cloud!", "err");
+        showToast("❌ Fout bij opslaan naar cloud: " + e.message, "err");
       }
     }
 
-    // --- 9. ZPL GENERATOR (ZOWEL KRAT ALS INDIVIDUEEL APPARAAT) ---
+    // --- 9. ZPL GENERATOR (KRAT ÉN LOS APPARAAT) ---
     function generateCrateZpl(locName, items) {
       var barcodeData = locName.toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
       if (!barcodeData) barcodeData = "KRAT";
@@ -860,7 +990,7 @@
       document.getElementById('modal').style.display = 'none';
     }
 
-    // --- 11. USB / BLUETOOTH HANDSCANNER LISTENER ---
+    // --- 11. USB / BLUETOOTH HANDSCANNER LISTENER (ARTIKEL ÉN KRAT) ---
     var scanBuffer = "";
     var lastKeyTime = Date.now();
 
@@ -868,10 +998,11 @@
       if (e.key === "Escape") {
         closeModal();
         closeZplModal();
+        closeAuthModal();
       }
 
       var activeEl = document.activeElement;
-      if (activeEl && (activeEl.id === "search-box" || activeEl.id === "manual-scan-input")) {
+      if (activeEl && (activeEl.id === "search-box" || activeEl.id === "manual-scan-input" || activeEl.id === "auth-email" || activeEl.id === "auth-pass")) {
         return;
       }
 
@@ -887,13 +1018,25 @@
           if (activeProjectScan.projectId && activeProjectScan.mode) {
             processProjectBarcodeScan(activeProjectScan.projectId, activeProjectScan.mode, code);
           } else {
-            var found = allGear.find(function(g) { return (g.qrCode || "").toLowerCase() === code.toLowerCase(); });
-            if (found) {
+            // Check 1: Is het een los artikel?
+            var foundItem = allGear.find(function(g) { return (g.qrCode || "").toLowerCase() === code.toLowerCase(); });
+            if (foundItem) {
               playBeep("ok");
-              openModal(encodeURIComponent(found.qrCode));
+              openModal(encodeURIComponent(foundItem.qrCode));
             } else {
-              playBeep("err");
-              showToast('❌ Gezochte barcode "' + code + '" niet gevonden', 'err');
+              // Check 2: Is het een krat-barcode (zoals KRAT-7)? Toon dan direct alle artikelen uit dat krat!
+              var crateMatches = allGear.filter(function(g) { return isCrateMatch(g.defaultLocation, code); });
+              if (crateMatches.length > 0) {
+                playBeep("new");
+                var realCrateName = crateMatches[0].defaultLocation;
+                switchTab('inventory');
+                document.getElementById('search-box').value = realCrateName;
+                renderGear();
+                showToast('📦 ' + realCrateName + ' geopend (' + crateMatches.length + ' artikelen)', 'ok');
+              } else {
+                playBeep("err");
+                showToast('❌ Gezochte barcode of krat "' + code + '" niet gevonden', 'err');
+              }
             }
           }
         }
