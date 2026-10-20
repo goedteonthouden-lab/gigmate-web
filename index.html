@@ -54,9 +54,11 @@
     .btn-loadout { background: #1E293B; color: #FF80BF; border: 1px solid rgba(255, 0, 127, 0.4); }
     .btn-loadout.active { background: #FF007F; color: #fff; box-shadow: 0 0 12px rgba(255, 0, 127, 0.4); }
     .btn-stop { background: #070B12; color: #94A3B8; border: 1px solid #374151; padding: 8px 12px; border-radius: 8px; font-size: 11px; cursor: pointer; }
+    .btn-delete { background: rgba(127, 29, 29, 0.3); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 10px; border-radius: 8px; font-size: 11px; cursor: pointer; }
+    .btn-delete:hover { background: #DC2626; color: #fff; }
 
     .scan-bar { background: #070B12; border: 1px solid #00F2FE; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
-    .scan-input-group { display: flex; gap: 8px; flex: 1; max-width: 340px; }
+    .scan-input-group { display: flex; gap: 8px; flex: 1; max-width: 360px; }
     .scan-input { flex: 1; background: #111827; border: 1px solid #374151; color: #fff; padding: 8px 12px; border-radius: 6px; font-family: monospace; font-size: 13px; outline: none; }
     .scan-input:focus { border-color: #00F2FE; }
     
@@ -64,7 +66,7 @@
     .alert-complete { background: rgba(6, 78, 59, 0.4); border: 1px solid #047857; color: #6EE7B7; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; margin-bottom: 12px; }
 
     /* Toast Notificatie */
-    #toast { position: fixed; bottom: 20px; right: 20px; left: 20px; max-width: 420px; margin: 0 auto; padding: 12px 16px; border-radius: 10px; font-weight: bold; font-size: 13px; z-index: 200; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.7); text-align: center; }
+    #toast { position: fixed; bottom: 20px; right: 20px; left: 20px; max-width: 440px; margin: 0 auto; padding: 12px 16px; border-radius: 10px; font-weight: bold; font-size: 13px; z-index: 200; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.7); text-align: center; }
     .toast-ok { background: #065F46; border: 2px solid #10B981; color: #fff; }
     .toast-warn { background: #78350F; border: 2px solid #F59E0B; color: #fff; }
     .toast-err { background: #7F1D1D; border: 2px solid #EF4444; color: #fff; }
@@ -72,7 +74,7 @@
     /* Modals */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 99; align-items: center; justify-content: center; padding: 16px; }
     .modal-box { background: #111827; border: 1px solid #374151; border-radius: 14px; width: 100%; max-width: 480px; padding: 18px; max-height: 90vh; overflow-y: auto; }
-    .btn-close { width: 100%; background: #1F2937; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; margin-top: 14px; cursor: pointer; }
+    .btn-close { width: 100%; background: #1F2937; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; margin-top: 10px; cursor: pointer; }
     .btn-action { background: #00F2FE; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; }
     .btn-action:hover { opacity: 0.9; }
     .hidden { display: none !important; }
@@ -81,7 +83,7 @@
 </head>
 <body>
 
-  <!-- Zwevende Toast Melding voor handsfree scannen -->
+  <!-- Zwevende Toast Melding -->
   <div id="toast"></div>
 
   <header>
@@ -160,20 +162,21 @@
         <div>Totale Voorraad: <b id="modal-qty"></b></div>
         <div style="margin-top:8px; padding-top:8px; border-top:1px solid #1F2937; font-size:12px; color:#94A3B8; font-style:italic;" id="modal-desc"></div>
       </div>
+      <button type="button" id="btn-item-zpl" class="btn-action" style="width:100%; margin-top:14px; padding:10px;">🏷️ Print Artikel ZPL Label</button>
       <button type="button" class="btn-close" onclick="closeModal()">Sluiten</button>
     </div>
   </div>
 
-  <!-- MODAL 2: ZPL KRATLABEL GENERATOR -->
+  <!-- MODAL 2: ZPL LABEL GENERATOR (Voor Krat én Artikel) -->
   <div id="zpl-modal" class="modal-overlay" onclick="closeZplModal()">
     <div class="modal-box" onclick="event.stopPropagation()">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h2 id="zpl-modal-title" style="font-size:17px; font-weight:bold; color:#00F2FE;">Zebra Kratlabel (102x150mm)</h2>
+        <h2 id="zpl-modal-title" style="font-size:17px; font-weight:bold; color:#00F2FE;">Zebra Label (102x150mm)</h2>
         <span style="font-size:11px; background:#1F2937; padding:2px 6px; border-radius:4px; color:#aaa;">203 DPI</span>
       </div>
       
       <p style="font-size:12px; color:#94A3B8; margin-bottom:8px;">
-        Thermische ZPL II code voor Zebra 102 x 150 mm verzend-/kratlabels:
+        Thermische ZPL II code voor Zebra 102 x 150 mm labels:
       </p>
 
       <textarea id="zpl-output" class="zpl-code" readonly></textarea>
@@ -197,11 +200,11 @@
     var DB_BASE = "https://gigmate-5bcd7-default-rtdb.europe-west1.firebasedatabase.app";
     var allGear = [];
     var allProjects = [];
-    var currentZplCrate = "";
+    var currentZplName = "";
     var activeProjectScan = { projectId: null, mode: null };
     var lastDataHash = "";
 
-    // --- 1. AUDIO FEEDBACK GENERATOR (Web Audio API) ---
+    // --- 1. AUDIO FEEDBACK GENERATOR ---
     var audioCtx = null;
     function playBeep(type) {
       try {
@@ -215,34 +218,29 @@
 
         var now = audioCtx.currentTime;
         if (type === "ok") {
-          // Korte hoge piep (1200 Hz)
           osc.type = "sine";
           osc.frequency.setValueAtTime(1200, now);
           gain.gain.setValueAtTime(0.15, now);
           osc.start(now);
           osc.stop(now + 0.1);
         } else if (type === "new") {
-          // Dubbele oplopende piep (900 -> 1400 Hz)
           osc.type = "sine";
           osc.frequency.setValueAtTime(900, now);
-          osc.frequency.setValueAtTime(1400, now + 0.08);
+          osc.frequency.setValueAtTime(1450, now + 0.08);
           gain.gain.setValueAtTime(0.15, now);
           osc.start(now);
-          osc.stop(now + 0.18);
+          osc.stop(now + 0.2);
         } else if (type === "err") {
-          // Lage fout-zoemer (220 Hz zaagtand)
           osc.type = "sawtooth";
           osc.frequency.setValueAtTime(220, now);
           gain.gain.setValueAtTime(0.2, now);
           osc.start(now);
           osc.stop(now + 0.3);
         }
-      } catch (e) {
-        console.warn("Audio niet ondersteund:", e);
-      }
+      } catch (e) {}
     }
 
-    // --- 2. TOAST MELDINGEN (Handsfree feedback) ---
+    // --- 2. TOAST MELDINGEN ---
     var toastTimer = null;
     function showToast(msg, level) {
       var t = document.getElementById("toast");
@@ -252,7 +250,7 @@
       if (toastTimer) clearTimeout(toastTimer);
       toastTimer = setTimeout(function() {
         t.style.display = "none";
-      }, 3200);
+      }, 3400);
     }
 
     // --- 3. TABWISSELAAR ---
@@ -269,13 +267,12 @@
       document.getElementById('btn-' + name).classList.add('active');
     }
 
-    // --- 4. CLOUD SYNCHRONISATIE (JSONP) ---
+    // --- 4. CLOUD SYNCHRONISATIE ---
     window.onCloudDataLoaded = function(data) {
       document.getElementById('conn-dot').className = "dot green";
       document.getElementById('conn-text').textContent = "Online";
       document.getElementById('conn-text').style.color = "#10B981";
 
-      // Controleer of de data echt veranderd is (voorkomt onnodig hertekenen en flikkeren)
       var currentHash = JSON.stringify(data || {});
       if (currentHash === lastDataHash) return;
       lastDataHash = currentHash;
@@ -292,11 +289,30 @@
       allProjects = [];
       if (data && data.projects) {
         var p = data.projects;
-        allProjects = Array.isArray(p) ? p.filter(Boolean) : Object.values(p);
+        if (Array.isArray(p)) {
+          for (var i = 0; i < p.length; i++) {
+            if (p[i]) {
+              if (!p[i].id) p[i].id = i;
+              allProjects.push(p[i]);
+            }
+          }
+        } else {
+          var keys = Object.keys(p);
+          for (var k = 0; k < keys.length; k++) {
+            var key = keys[k];
+            var projObj = p[key];
+            if (projObj && typeof projObj === "object") {
+              projObj._firebaseKey = key;
+              if (!projObj.id) projObj.id = key;
+              allProjects.push(projObj);
+            }
+          }
+        }
       }
+      // Sorteer nieuwste bovenaan
+      allProjects.sort(function(a, b) { return (b.id || 0) - (a.id || 0); });
       document.getElementById('c-proj').textContent = allProjects.length;
 
-      // Als de gebruiker net een barcode aan het typen is in het handmatige veld, breek het typen niet af
       var activeEl = document.activeElement;
       if (!activeEl || activeEl.id !== "manual-scan-input" || activeEl.value === "") {
         renderProjects();
@@ -382,7 +398,7 @@
         html += '<div class="loc-card">' +
                   '<div class="loc-title">' +
                     '<span>📦 ' + locName + '</span>' +
-                    '<button type="button" class="btn-zpl" onclick="openZplModal(\'' + encodeURIComponent(locName) + '\')">🏷️ ZPL Label</button>' +
+                    '<button type="button" class="btn-zpl" onclick="openZplModal(\'' + encodeURIComponent(locName) + '\')">🏷️ Krat ZPL</button>' +
                   '</div>';
         
         for (var k = 0; k < items.length; k++) {
@@ -397,7 +413,7 @@
       grid.innerHTML = html;
     }
 
-    // --- 7. RENDER PROJECTEN & LOAD-IN / LOAD-OUT ---
+    // --- 7. RENDER PROJECTEN & VERWIJDERKNOP ---
     function renderProjects() {
       var cont = document.getElementById('proj-container');
       if (allProjects.length === 0) {
@@ -408,12 +424,13 @@
       var html = "";
       for (var i = 0; i < allProjects.length; i++) {
         var p = allProjects[i];
+        var pKey = p._firebaseKey || p.id;
         var pItems = p.items ? (Array.isArray(p.items) ? p.items.filter(Boolean) : Object.values(p.items)) : [];
         var missing = pItems.filter(function(it) {
           return (parseInt(it.loadedInCount) || 0) > (parseInt(it.loadedOutCount) || 0);
         });
 
-        var isScanActive = (activeProjectScan.projectId == p.id);
+        var isScanActive = (activeProjectScan.projectId == pKey);
         var curMode = isScanActive ? activeProjectScan.mode : null;
 
         html += '<div class="card ' + (isScanActive ? 'scan-active' : '') + '">' +
@@ -422,25 +439,24 @@
                       '<h2 style="font-size:18px; font-weight:900; color:#fff;">' + (p.name || 'Naamloos evenement') + '</h2>' +
                       '<div style="font-size:12px; color:#94A3B8; margin-top:3px;">📍 ' + (p.location || '-') + ' • 📅 ' + (p.date || '-') + '</div>' +
                     '</div>' +
-                    '<div style="display:flex; gap:8px; flex-wrap:wrap;">' +
-                      '<button type="button" class="btn-mode btn-loadin ' + (curMode === 'LOAD_IN' ? 'active' : '') + '" onclick="setProjectScanMode(\'' + p.id + '\', \'LOAD_IN\')">⬇️ ' + (curMode === 'LOAD_IN' ? 'LOAD-IN ACTIEF' : 'START LOAD-IN') + '</button>' +
-                      '<button type="button" class="btn-mode btn-loadout ' + (curMode === 'LOAD_OUT' ? 'active' : '') + '" onclick="setProjectScanMode(\'' + p.id + '\', \'LOAD_OUT\')">⬆️ ' + (curMode === 'LOAD_OUT' ? 'LOAD-OUT ACTIEF' : 'START LOAD-OUT') + '</button>' +
+                    '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">' +
+                      '<button type="button" class="btn-mode btn-loadin ' + (curMode === 'LOAD_IN' ? 'active' : '') + '" onclick="setProjectScanMode(\'' + pKey + '\', \'LOAD_IN\')">⬇️ ' + (curMode === 'LOAD_IN' ? 'LOAD-IN ACTIEF' : 'START LOAD-IN') + '</button>' +
+                      '<button type="button" class="btn-mode btn-loadout ' + (curMode === 'LOAD_OUT' ? 'active' : '') + '" onclick="setProjectScanMode(\'' + pKey + '\', \'LOAD_OUT\')">⬆️ ' + (curMode === 'LOAD_OUT' ? 'LOAD-OUT ACTIEF' : 'START LOAD-OUT') + '</button>' +
                       (isScanActive ? '<button type="button" class="btn-stop" onclick="stopProjectScan()">Stoppen</button>' : '') +
+                      '<button type="button" class="btn-delete" title="Verwijder dit evenement" onclick="deleteProjectCloud(\'' + pKey + '\', \'' + encodeURIComponent(p.name || 'Evenement') + '\')">🗑️</button>' +
                     '</div>' +
                   '</div>';
 
-        // Invoerbalk wanneer scannen actief is
         if (isScanActive) {
           html += '<div class="scan-bar">' +
-                    '<div style="font-size:12px; font-weight:bold; color:#00F2FE;">📡 Scan met handscanner of typ code voor ' + (curMode === 'LOAD_IN' ? 'LOAD-IN (Uitgeven)' : 'LOAD-OUT (Terug in krat)') + ':</div>' +
+                    '<div style="font-size:12px; font-weight:bold; color:#00F2FE;">📡 Scan artikel óf een heel krat (bijv. KRAT-7) voor ' + (curMode === 'LOAD_IN' ? 'LOAD-IN' : 'LOAD-OUT') + ':</div>' +
                     '<div class="scan-input-group">' +
-                      '<input type="text" id="manual-scan-input" class="scan-input" placeholder="Typ barcode & Enter..." onkeydown="if(event.key===\'Enter\') submitManualScan(\'' + p.id + '\')">' +
-                      '<button type="button" class="btn-action" onclick="submitManualScan(\'' + p.id + '\')">Scan</button>' +
+                      '<input type="text" id="manual-scan-input" class="scan-input" placeholder="Barcode of Kratnaam & Enter..." onkeydown="if(event.key===\'Enter\') submitManualScan(\'' + pKey + '\')">' +
+                      '<button type="button" class="btn-action" onclick="submitManualScan(\'' + pKey + '\')">Scan</button>' +
                     '</div>' +
                   '</div>';
         }
 
-        // Statusbalk compleetheid
         if (missing.length > 0) {
           html += '<div class="alert-missing">⚠️ Let op: nog ' + missing.length + ' artikel(en) uitgeladen en nog niet terug in het krat!</div>';
         } else if (pItems.length > 0) {
@@ -471,7 +487,7 @@
           }
           html += '</tbody></table></div>';
         } else {
-          html += '<div style="font-size:12px; color:#64748B; font-style:italic;">Nog geen artikelen gekoppeld. Start Load-In om direct artikelen te scannen.</div>';
+          html += '<div style="font-size:12px; color:#64748B; font-style:italic;">Nog geen artikelen gekoppeld. Start Load-In om direct artikelen of kratten te scannen.</div>';
         }
         html += '</div>';
       }
@@ -483,7 +499,21 @@
       }
     }
 
-    // --- 8. LOAD-IN / LOAD-OUT VERWERKING ---
+    async function deleteProjectCloud(projectKey, encName) {
+      var name = decodeURIComponent(encName);
+      if (!confirm('Weet je zeker dat je evenement "' + name + '" definitief wilt verwijderen?')) return;
+
+      try {
+        await fetch(DB_BASE + "/projects/" + projectKey + ".json", { method: "DELETE" });
+        lastDataHash = "";
+        fetchCloud();
+        showToast('🗑️ Evenement "' + name + '" verwijderd!', 'ok');
+      } catch (e) {
+        showToast('❌ Fout bij verwijderen evenement', 'err');
+      }
+    }
+
+    // --- 8. LOAD-IN / LOAD-OUT (INCLUSIEF SLIMME KRAT-SCAN!) ---
     function setProjectScanMode(projectId, mode) {
       if (activeProjectScan.projectId == projectId && activeProjectScan.mode === mode) {
         stopProjectScan();
@@ -507,24 +537,78 @@
       processProjectBarcodeScan(projectId, activeProjectScan.mode, code);
     }
 
-    async function processProjectBarcodeScan(projectId, mode, code) {
-      var proj = allProjects.find(function(p) { return p.id == projectId; });
+    async function processProjectBarcodeScan(projectKey, mode, code) {
+      var proj = allProjects.find(function(p) { return (p._firebaseKey || p.id) == projectKey; });
       if (!proj) return;
 
-      // Zoek in de voorraad
+      var items = proj.items ? (Array.isArray(proj.items) ? proj.items.filter(Boolean) : Object.values(proj.items)) : [];
+      var normalizedCode = code.trim().toLowerCase();
+
+      // CHECK 1: Is dit een KRAT-barcode (bijv. "KRAT-7" of "Krat 7")?
+      var crateItems = allGear.filter(function(g) {
+        var loc = (g.defaultLocation || "").trim();
+        var locZplBarcode = loc.toUpperCase().replace(/[^A-Z0-9_-]/g, '-').toLowerCase();
+        return loc.toLowerCase() === normalizedCode || locZplBarcode === normalizedCode;
+      });
+
+      if (crateItems.length > 0) {
+        var crateName = crateItems[0].defaultLocation;
+        if (mode === "LOAD_IN") {
+          for (var c = 0; c < crateItems.length; c++) {
+            var gItem = crateItems[c];
+            var idx = items.findIndex(function(i) { return (i.gearQr || "").trim().toLowerCase() === gItem.qrCode.trim().toLowerCase(); });
+            var qty = parseInt(gItem.quantity) || 1;
+            if (idx !== -1) {
+              var target = Math.max(parseInt(items[idx].requiredCount) || 1, qty);
+              items[idx].requiredCount = target;
+              items[idx].loadedInCount = target;
+            } else {
+              items.push({
+                gearQr: gItem.qrCode,
+                gearName: gItem.name,
+                defaultLocation: gItem.defaultLocation,
+                category: gItem.category,
+                photoUri: gItem.photoUri || null,
+                requiredCount: qty,
+                loadedInCount: qty,
+                loadedOutCount: 0
+              });
+            }
+          }
+          playBeep("new");
+          showToast('📦 Hele ' + crateName + ' (' + crateItems.length + ' artikelen) in één keer ingeladen!', 'ok');
+        } else if (mode === "LOAD_OUT") {
+          var packedCount = 0;
+          for (var d = 0; d < crateItems.length; d++) {
+            var gOut = crateItems[d];
+            var oIdx = items.findIndex(function(i) { return (i.gearQr || "").trim().toLowerCase() === gOut.qrCode.trim().toLowerCase(); });
+            if (oIdx !== -1 && (parseInt(items[oIdx].loadedInCount) || 0) > 0) {
+              items[oIdx].loadedOutCount = items[oIdx].loadedInCount;
+              packedCount++;
+            }
+          }
+          playBeep("new");
+          showToast('📦 Hele ' + crateName + ' (' + packedCount + ' artikelen) compleet ingepakt!', 'ok');
+        }
+
+        proj.items = items;
+        await saveProjectToCloud(projectKey, proj);
+        return;
+      }
+
+      // CHECK 2: Regulier los artikel scannen
       var gearInfo = allGear.find(function(g) {
-        return (g.qrCode || "").trim().toLowerCase() === code.trim().toLowerCase();
+        return (g.qrCode || "").trim().toLowerCase() === normalizedCode;
       });
 
       if (!gearInfo) {
         playBeep("err");
-        showToast('❌ Barcode "' + code + '" bestaat niet in je voorraad!', "err");
+        showToast('❌ Barcode of krat "' + code + '" bestaat niet in je voorraad!', "err");
         return;
       }
 
-      var items = proj.items ? (Array.isArray(proj.items) ? proj.items.filter(Boolean) : Object.values(proj.items)) : [];
       var entryIndex = items.findIndex(function(i) {
-        return (i.gearQr || "").trim().toLowerCase() === code.trim().toLowerCase();
+        return (i.gearQr || "").trim().toLowerCase() === normalizedCode;
       });
 
       if (mode === "LOAD_IN") {
@@ -588,14 +672,24 @@
       }
 
       proj.items = items;
-      lastDataHash = ""; // Forceer UI verversing
-      renderProjects();
+      await saveProjectToCloud(projectKey, proj);
+    }
 
+    async function saveProjectToCloud(projectKey, proj) {
+      lastDataHash = "";
+      renderProjects();
       try {
-        await fetch(DB_BASE + "/projects/" + projectId + ".json", {
+        var cleanCopy = {
+          id: Number(proj.id) || Date.now(),
+          name: proj.name || "",
+          location: proj.location || "",
+          date: proj.date || "",
+          items: proj.items || []
+        };
+        await fetch(DB_BASE + "/projects/" + projectKey + ".json", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(proj)
+          body: JSON.stringify(cleanCopy)
         });
         fetchCloud();
       } catch (e) {
@@ -604,14 +698,14 @@
       }
     }
 
-    // --- 9. ZPL KRATLABEL GENERATOR & DIRECT PRINTEN ---
-    function generateZpl(locName, items) {
+    // --- 9. ZPL GENERATOR (ZOWEL KRAT ALS INDIVIDUEEL APPARAAT) ---
+    function generateCrateZpl(locName, items) {
       var barcodeData = locName.toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
       if (!barcodeData) barcodeData = "KRAT";
 
       var z = "^XA\n^PW812\n^LL1218\n^CI28\n";
       z += "^FO40,40^GB732,1138,4^FS\n";
-      z += "^FO70,70^A0N,50,50^FDGIGMATE INVENTORY^FS\n";
+      z += "^FO70,70^A0N,50,50^FDGIGMATE CRATE LABEL^FS\n";
       z += "^FO70,130^GB672,3,3^FS\n";
       z += "^FO70,160^A0N,75,75^FDKRAT: " + locName.toUpperCase() + "^FS\n";
       z += "^FO70,260^BY3,3,90\n^BCN,90,Y,N,N\n^FD" + barcodeData + "^FS\n";
@@ -630,27 +724,56 @@
         z += "^FO680," + y + "^A0N,28,28^FD" + qty + "x^FS\n";
         y += 44;
       }
-      
       if (items.length > 12) {
         z += "^FO70," + y + "^A0N,24,24^FD... en nog " + (items.length - 12) + " extra artikel(en)^FS\n";
       }
-      
       z += "^FO70,1110^A0N,22,22^FDGIGMATE STAGE GEAR • PRINTDATUM: " + new Date().toLocaleDateString('nl-NL') + "^FS\n";
+      z += "^XZ\n";
+      return z;
+    }
+
+    function generateItemZpl(item) {
+      var qr = (item.qrCode || "0000").trim();
+      var z = "^XA\n^PW812\n^LL1218\n^CI28\n";
+      z += "^FO40,40^GB732,1138,4^FS\n";
+      z += "^FO70,70^A0N,45,45^FDGIGMATE EQUIPMENT TAG^FS\n";
+      z += "^FO70,130^GB672,3,3^FS\n";
+      z += "^FO70,170^A0N,65,65^FD" + (item.name || "APPARAAT").toUpperCase().substring(0, 20) + "^FS\n";
+      z += "^FO70,255^A0N,35,35^FDCATEGORIE: " + (item.category || "-").toUpperCase() + "^FS\n";
+      z += "^FO70,340^BY4,3,140\n^BCN,140,Y,N,N\n^FD" + qr + "^FS\n";
+      z += "^FO70,560^GB672,3,3^FS\n";
+      z += "^FO70,600^A0N,55,55^FDVASTE LOCATIE / KRAT:^FS\n";
+      z += "^FO70,680^A0N,90,90^FD" + (item.defaultLocation || "OVERIG").toUpperCase() + "^FS\n";
+      z += "^FO70,820^A0N,35,35^FDAANTAL IN VOORRAAD: " + (item.quantity || 1) + " STUK(S)^FS\n";
+      if (item.description) {
+        z += "^FO70,890^A0N,28,28^FDNOTITIE: " + item.description.substring(0, 38) + "^FS\n";
+      }
+      z += "^FO70,1110^A0N,22,22^FDGIGMATE STAGE GEAR • PROPERTY OF ARJAN BRUINS^FS\n";
       z += "^XZ\n";
       return z;
     }
 
     function openZplModal(encLoc) {
       var locName = decodeURIComponent(encLoc);
-      currentZplCrate = locName;
+      currentZplName = locName;
 
       var items = allGear.filter(function(g) {
         return (g.defaultLocation || "Overig").trim().toLowerCase() === locName.toLowerCase();
       });
 
-      var zplCode = generateZpl(locName, items);
+      var zplCode = generateCrateZpl(locName, items);
       document.getElementById('zpl-output').value = zplCode;
-      document.getElementById('zpl-modal-title').textContent = "Zebra Label: " + locName;
+      document.getElementById('zpl-modal-title').textContent = "Zebra Kratlabel: " + locName;
+      document.getElementById('zpl-preview-wrap').style.display = 'none';
+      document.getElementById('zpl-modal').style.display = 'flex';
+    }
+
+    function openItemZplModal(item) {
+      closeModal();
+      currentZplName = item.name || item.qrCode;
+      var zplCode = generateItemZpl(item);
+      document.getElementById('zpl-output').value = zplCode;
+      document.getElementById('zpl-modal-title').textContent = "Artikel Label: " + currentZplName;
       document.getElementById('zpl-preview-wrap').style.display = 'none';
       document.getElementById('zpl-modal').style.display = 'flex';
     }
@@ -672,7 +795,7 @@
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
-      a.download = "label_" + currentZplCrate.replace(/[^a-zA-Z0-9]/g, '_') + ".zpl";
+      a.download = "label_" + currentZplName.replace(/[^a-zA-Z0-9]/g, '_') + ".zpl";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -697,7 +820,7 @@
         showToast("⚠️ Pop-up geblokkeerd! Sta pop-ups toe voor deze site.", "warn");
         return;
       }
-      printWindow.document.write('<!DOCTYPE html><html><head><title>Print Label - ' + currentZplCrate + '</title>');
+      printWindow.document.write('<!DOCTYPE html><html><head><title>Print Label - ' + currentZplName + '</title>');
       printWindow.document.write('<style>@page { size: 102mm 152mm; margin: 0; } body { margin: 0; display: flex; justify-content: center; align-items: center; background: #fff; } img { width: 100%; height: auto; max-height: 100vh; object-fit: contain; }</style>');
       printWindow.document.write('</head><body>');
       printWindow.document.write('<img src="' + imgUrl + '" onload="setTimeout(function(){ window.print(); window.close(); }, 250);" />');
@@ -717,6 +840,9 @@
       document.getElementById('modal-loc').textContent = '📦 ' + (item.defaultLocation || '-');
       document.getElementById('modal-qty').textContent = (item.quantity || 1) + ' stuk(s)';
       document.getElementById('modal-desc').textContent = item.description || 'Geen extra opmerkingen.';
+
+      var btnZpl = document.getElementById('btn-item-zpl');
+      btnZpl.onclick = function() { openItemZplModal(item); };
 
       var imgWrap = document.getElementById('modal-img-wrap');
       var img = document.getElementById('modal-img');
@@ -744,7 +870,6 @@
         closeZplModal();
       }
 
-      // Negeer als de gebruiker zelf typt in een zoek- of invoerveld
       var activeEl = document.activeElement;
       if (activeEl && (activeEl.id === "search-box" || activeEl.id === "manual-scan-input")) {
         return;
@@ -762,7 +887,6 @@
           if (activeProjectScan.projectId && activeProjectScan.mode) {
             processProjectBarcodeScan(activeProjectScan.projectId, activeProjectScan.mode, code);
           } else {
-            // Als we niet in een project aan het laden zijn, open direct de artikel-popup!
             var found = allGear.find(function(g) { return (g.qrCode || "").toLowerCase() === code.toLowerCase(); });
             if (found) {
               playBeep("ok");
